@@ -210,15 +210,17 @@ function SessionDemo({
           </div>
         </div>
         <div className="session-bridge" aria-label="共享的是这次协作 Session">
-          <div className="bridge-line" />
+          <div className="bridge-line" aria-hidden="true" />
           <div className="session-token">
-            <Image src="/brand-mark.svg" width="23" height="23" alt="" />
-            <span>一个 Session</span>
+            <Image src="/brand-mark.svg" width="20" height="20" alt="" />
           </div>
-          <div className="bridge-label">
-            <span>上下文</span>
-            <span>批注</span>
-            <span>输入交接</span>
+          <div className="session-legend">
+            <p>一个 Session</p>
+            <ul className="bridge-label">
+              <li>上下文</li>
+              <li>批注</li>
+              <li>输入交接</li>
+            </ul>
           </div>
         </div>
         <div className="native-window personal-window">
