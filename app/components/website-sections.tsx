@@ -126,7 +126,7 @@ export function WhySection() {
       <div className="workflow-strip">
         <span>你已经在用的工作方式</span>
         <div>
-          Multica<span>·</span>T3 Code<span>·</span>Paseo<span>·</span>Lody
+          Codex<span>·</span>Claude Code<span>·</span>T3 Code<span>·</span>Paseo<span>·</span>Lody
           <span>·</span>Warp + tmux<span>·</span>Herdr
         </div>
         <p>围绕可接入的原生 Session 协作，具体接入范围以对应版本文档为准。</p>
