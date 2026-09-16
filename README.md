@@ -36,7 +36,9 @@ npm run preview
 
 ## 发布准备
 
-当前项目仅建立本地网站，未注册或部署远端站点，未设置 Git 远端。`.openai/hosting.json` 仅声明静态产物路径，不含站点 ID。
+源码仓库：[YTwsy/Team-Cross-Website](https://github.com/YTwsy/Team-Cross-Website)，默认分支为 `main`，与 Team Cross 产品仓库分别维护。
+
+网站尚未部署。后续在 Cloudflare 上部署时，使用 `npm run build` 构建，静态产物目录为 `dist/client/`。`.openai/hosting.json` 仅声明静态产物路径，不含站点 ID。
 
 正式域名确定后，再补充 canonical、sitemap 和 robots 的公开 URL。当前不使用虚构域名，也不生成未经请求的社交分享图。下载与文档直接链接产品的 GitHub Releases 和 README。
 
