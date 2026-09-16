@@ -1652,6 +1652,9 @@ h2 {
   margin-top: 17px;
   font-size: 32px;
 }
+.faq-list [data-slot="accordion-item"] {
+  border-color: #e8edf3;
+}
 .faq-list [data-slot="accordion-trigger"] {
   font-size: 15px;
   line-height: 1.8;
