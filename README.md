@@ -27,6 +27,7 @@ npm run preview
 - `app/components/website-sections.tsx`：工作流痛点、参与方式、可选 WebGUI、LAN / Tailcat、产品方向、FAQ、下载与复制安装命令。
 - `app/globals.css`：品牌样式、响应式布局、交互与减少动态效果支持。
 - `app/layout.tsx`：中文页面、标题、描述、Open Graph / Twitter 文字元数据和图标。
+- `public/sitemap.xml`、`public/robots.txt`：以正式站点地址提供搜索引擎发现入口。
 - `public/brand-mark.svg`、`public/favicon.svg`：来自 Team Cross 产品仓库 WebGUI 图标。
 - `public/app-icon.png`：来自 Team Cross 产品仓库 macOS App 图标。
 
@@ -38,8 +39,8 @@ npm run preview
 
 源码仓库：[YTwsy/Team-Cross-Website](https://github.com/YTwsy/Team-Cross-Website)，默认分支为 `main`，与 Team Cross 产品仓库分别维护。
 
-网站尚未部署。后续在 Cloudflare 上部署时，使用 `npm run build` 构建，静态产物目录为 `dist/client/`。`.openai/hosting.json` 仅声明静态产物路径，不含站点 ID。
+网站通过 Cloudflare Pages 发布：[teamcross.pages.dev](https://teamcross.pages.dev/)。`main` 分支推送后自动构建，构建命令为 `npm run build`，静态产物目录为 `dist/client/`。`.openai/hosting.json` 仅声明静态产物路径，不含站点 ID。
 
-正式域名确定后，再补充 canonical、sitemap 和 robots 的公开 URL。当前不使用虚构域名，也不生成未经请求的社交分享图。下载与文档直接链接产品的 GitHub Releases 和 README。
+canonical、sitemap 和 robots 使用 `https://teamcross.pages.dev`。当前不生成未经请求的社交分享图。下载与文档直接链接产品的 GitHub Releases 和 README。
 
 发布前运行类型检查、静态构建，并复核桌面与手机上的五步演示、参与方式标签、可选 WebGUI、LAN / Tailcat、FAQ、安装命令复制及键盘操作。
