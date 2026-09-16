@@ -1,6 +1,6 @@
 # Team Cross Website
 
-Team Cross 独立宣传网站。主张：**你的工具，就是协作的入口。**
+Team Cross：**你的工具，就是协作的入口。**
 
 ## 本地开发
 
