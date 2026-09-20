@@ -19,7 +19,7 @@ import {
   Server,
   ShieldCheck,
   Terminal,
-  Users,
+  FileText,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -39,36 +39,48 @@ const installCommand = "brew install YTwsy/teamcross/teamcross-rc";
 const participation = [
   {
     id: "read",
-    label: "看一眼，提个意见",
+    label: "看一眼，提意见",
     icon: MessageSquare,
     title: "带着上下文开始讨论。",
-    text: "查看已经发生的对话和当前改动，把意见留在具体代码或原文旁。只想帮忙审阅，也是一种完整的参与方式。",
-    prompt: "读一下 Lin 分享的会话，看看回跳逻辑。",
-    tool: "读取会话与当前改动",
-    result: "这里还需要检查外部 URL。我已把意见留在对应代码旁。",
+    text: "阅读同事选择公开的会话内容，把意见留在原文旁。几位同事可以一起讨论，只想帮忙审阅，也是一种完整的参与方式。",
+    prompt: "这段回跳逻辑，还需要检查外部 URL。",
+    tool: "原文旁批注 · 登录回跳调查 v1",
+    result: "意见已保存，其他同事可以沿着这段原文继续回复。",
     detail: "浏览与批注无需取得输入权。",
+  },
+  {
+    id: "publish",
+    label: "带来我的调查",
+    icon: FileText,
+    title: "把你这边的发现，也带进来。",
+    text: "从自己的 Codex 或 Claude Code Session 中选择一段，预览后发布到同一个空间。每位同事都能贡献多份材料，让各自做过的调查成为共同的讨论依据。",
+    prompt: "把我这次复现的第 2—3 轮分享进来。",
+    tool: "已预览公开范围 · 发布会话材料",
+    result:
+      "外部地址复现记录 v1 已发布。大家可以引用这份材料，与 Lin 的调查一起讨论。",
+    detail: "后续更新由作者主动发布，已有引用保留当时的版本。",
   },
   {
     id: "agent",
     label: "带上我的 Agent",
     icon: Terminal,
     title: "让你自己的 Agent 参与。",
-    text: "个人 Codex 或 Claude Code 通过 Team Cross MCP 读取共享 Session、核对文件、回复批注。自己的会话与本地上下文继续保留。",
+    text: "个人 Codex 或 Claude Code 通过 Team Cross MCP 按需读取已发布材料、核对引用并回复讨论。自己的会话、模型与本地上下文继续保留。",
     prompt: "核对这条批注，结合我们的约定分析一下。",
-    tool: "Team Cross MCP · 读取引用与改动",
+    tool: "Team Cross MCP · 读取两份引用材料",
     result: "已核对原文，建议只接受同源路径。我已将分析回复到原批注。",
-    detail: "读取可以并行；向共享 Agent 发送任务需要输入权。",
+    detail: "按你的指令参与，保存批注不会自动向共享 Agent 发送任务。",
   },
   {
     id: "native",
-    label: "这一段，我来处理",
+    label: "接过输入继续",
     icon: Monitor,
     title: "在原生客户端里接着做。",
-    text: "明确交接输入后，使用本机 Codex Desktop 或熟悉终端中的原生 CLI/TUI 操作共享会话。处理好这一段，再把输入交还。",
+    text: "获得执行访问并明确交接输入后，使用本机 Codex 专用 Desktop 或原生 CLI/TUI 操作共享会话。处理好这一段，再把输入交还。",
     prompt: "补上同源校验，并运行对应测试。",
     tool: "原生协作 · 输入已交接给 Mei",
     result: "将在 Lin 的 Mac 上完成修改。会话与执行继续留在发起者主机。",
-    detail: "直接入口遵循协作的 Provider；Claude Code TUI 为实验性。",
+    detail: "使用与共享会话对应的原生客户端；Claude Code TUI 为实验性。",
   },
 ];
 
@@ -106,9 +118,10 @@ export function WhySection() {
         <article>
           <span className="point-number">02</span>
           <div>
-            <h3>省下重新讲述上下文的时间。</h3>
+            <h3>各自做过的调查，一起用起来。</h3>
             <p>
-              之前的尝试、正在讨论的问题、当下的代码改动，都有迹可循。让同事直接进入工作现场，把意见留在原处。
+              你分享定位问题的过程，同事补充自己的复现记录。把来自不同 Session
+              的依据放在一起，引用具体版本，在原文旁讨论。
             </p>
           </div>
         </article>
@@ -117,8 +130,7 @@ export function WhySection() {
           <div>
             <h3>参与多深，由这次工作决定。</h3>
             <p>
-              可以只看一眼，让自己的 Agent
-              分析，也可以接过输入处理一段。需要帮助时加入，处理好后交还，接力的节奏由你们决定。
+              先选择一段内容分享，邀请几位同事讨论。需要一起动手时，再开启执行并交接输入，沿着新的原生协作会话继续。
             </p>
           </div>
         </article>
@@ -126,8 +138,9 @@ export function WhySection() {
       <div className="workflow-strip">
         <span>你已经在用的工作方式</span>
         <div>
-          Codex<span>·</span>Claude Code<span>·</span>T3 Code<span>·</span>Paseo<span>·</span>Lody
-          <span>·</span>Warp + tmux<span>·</span>Herdr
+          Codex<span>·</span>Claude Code<span>·</span>T3 Code<span>·</span>Paseo
+          <span>·</span>Lody
+          <span>·</span>Warp + Tmux<span>·</span>Herdr
         </div>
         <p>围绕可接入的原生 Session 协作，具体接入范围以对应版本文档为准。</p>
       </div>
@@ -137,6 +150,27 @@ export function WhySection() {
 
 export function ParticipationSection() {
   const [webOpen, setWebOpen] = useState(false);
+  const [material, setMaterial] = useState(0);
+  const materials = [
+    {
+      title: "登录回跳调查",
+      author: "Lin",
+      turn: "第 3 轮 · 核对实现",
+      quote: "回跳参数直接传给了跳转函数，还没有检查目标地址是否同源。",
+      comment: "结合 Mei 的复现记录，这里也要检查 // 开头的地址。",
+      reference: "外部地址复现记录 · v1",
+    },
+    {
+      title: "外部地址复现记录",
+      author: "Mei",
+      turn: "第 2 轮 · 复现问题",
+      quote:
+        "使用外部 URL 和协议相对地址都可以触发跳转，合法的站内路径应继续保留。",
+      comment: "这与 Lin 定位的代码一致，可以把这两类地址一起补进检查。",
+      reference: "登录回跳调查 · v1",
+    },
+  ];
+  const selected = materials[material];
   return (
     <section
       className="participation-section section-space"
@@ -147,9 +181,9 @@ export function ParticipationSection() {
         <div className="section-heading">
           <span className="overline">轻轻加入，也能真正参与</span>
           <h2 id="participate-title">选择适合当下的参与方式。</h2>
-          <p>从给出一个建议，到亲自接过输入，都能沿用熟悉的工具。</p>
+          <p>给出建议、带来调查、让 Agent 帮忙，或亲自接过输入。</p>
         </div>
-        <Tabs defaultValue="agent" className="participation-tabs">
+        <Tabs defaultValue="publish" className="participation-tabs">
           <TabsList className="mode-tabs" aria-label="参与协作的方式">
             {participation.map(({ id, label, icon: Icon }) => (
               <TabsTrigger key={id} value={id}>
@@ -176,9 +210,17 @@ export function ParticipationSection() {
                   <span>
                     {mode.id === "native"
                       ? "Mei 的原生客户端"
-                      : "Mei 的个人 Agent"}
+                      : mode.id === "agent"
+                        ? "Mei 的个人 Agent"
+                        : "Mei 的协作视图"}
                   </span>
-                  <span>{mode.id === "native" ? "共享会话" : "个人会话"}</span>
+                  <span>
+                    {mode.id === "native"
+                      ? "共享会话"
+                      : mode.id === "agent"
+                        ? "个人会话"
+                        : "材料与讨论"}
+                  </span>
                 </div>
                 <div className="conversation-user">
                   <div className="small-avatar">M</div>
@@ -208,7 +250,7 @@ export function ParticipationSection() {
               <PanelTop size={20} />
               <div>
                 <strong>需要共同视图时，也可以打开 WebGUI。</strong>
-                <p>会话、改动与批注，一个可选的展示面。</p>
+                <p>按轮次阅读材料，展开工具过程，把讨论留在原文旁。</p>
               </div>
             </div>
             <CollapsibleTrigger className="web-toggle">
@@ -217,40 +259,64 @@ export function ParticipationSection() {
             </CollapsibleTrigger>
           </div>
           <CollapsibleContent>
-            <div className="web-preview" aria-label="可选 WebGUI 示意">
+            <div className="web-preview" aria-label="可选 WebGUI 交互示意">
               <div className="web-preview-nav">
                 <Image src="/brand-mark.svg" width="18" height="18" alt="" />
-                <strong>修复登录回跳</strong>
-                <span>Lin 的 Mac · 输入：Lin</span>
+                <strong>一起核对登录回跳</strong>
+                <span>Lin、Mei、Kai · 只读分享</span>
+              </div>
+              <div
+                className="preview-material-list"
+                role="group"
+                aria-label="选择示意材料"
+              >
+                {materials.map((item, index) => (
+                  <button
+                    type="button"
+                    key={item.title}
+                    aria-pressed={material === index}
+                    onClick={() => setMaterial(index)}
+                  >
+                    <FileText size={16} />
+                    <span>
+                      {item.title}
+                      <small>{item.author} · v1</small>
+                    </span>
+                  </button>
+                ))}
               </div>
               <div className="web-preview-content">
-                <div>
-                  <div className="file-label">src/auth/redirect.ts</div>
-                  <pre>
-                    <code>
-                      <span>{" const raw = params.get('next');"}</span>
-                      <span className="diff-line">
-                        + const next = sameOriginPath(raw);
-                      </span>
-                      <span> return redirect(next);</span>
-                    </code>
-                  </pre>
+                <div className="preview-reader" key={material}>
+                  <span className="file-label">{selected.turn}</span>
+                  <h3>{selected.title}</h3>
+                  <blockquote>{selected.quote}</blockquote>
+                  <details className="preview-tool-output">
+                    <summary>查看工具过程</summary>
+                    <pre>
+                      {material === 0
+                        ? 'src/auth/redirect.ts\nconst next = params.get("next");\nreturn redirect(next);'
+                        : "外部 URL → 可以跳转\n// 开头的地址 → 可以跳转\n站内路径 → 正常跳转"}
+                    </pre>
+                  </details>
+                  <p className="preview-reader-note">
+                    先读对话，需要时再展开具体过程。
+                  </p>
                 </div>
                 <aside>
-                  <span className="file-label">原处批注</span>
+                  <span className="file-label">围绕这段原文讨论</span>
                   <div className="web-comment">
-                    <div className="small-avatar">M</div>
+                    <div className="small-avatar">K</div>
                     <p>
-                      这里也要检查外部 URL。<small>Mei · 引用第 2 行</small>
+                      {selected.comment}
+                      <small>Kai · 引用 {selected.title} v1</small>
                     </p>
                   </div>
-                  <div className="web-comment reply">
-                    <Image src="/brand-mark.svg" width="20" height="20" alt="" />
-                    <p>
-                      已核对原文，将补上同源校验。
-                      <small>共享 Agent · 回复</small>
-                    </p>
+                  <div className="reference-tags">
+                    <span>{selected.reference}</span>
                   </div>
+                  <p className="preview-reader-note">
+                    引用固定版本。作者发布新内容后，仍能找到当时的依据。
+                  </p>
                 </aside>
               </div>
             </div>
@@ -282,7 +348,7 @@ export function ConnectionSection() {
         <div className="connection-facts">
           <span>
             <Check size={15} />
-            无需 Team Cross 账号
+            没有云端后端
           </span>
           <span>
             <Check size={15} />
@@ -336,10 +402,11 @@ export function ConnectionSection() {
               <span>邀请者</span>
               <small>网络 A</small>
             </div>
-            <div className="network-wire tailcat">
+            <div className="network-wire">
               <span>Tailcat</span>
-              <i />
-              <Globe size={19} />
+              <i>
+                <Globe size={18} strokeWidth={1.75} aria-hidden="true" />
+              </i>
             </div>
             <div className="network-machine">
               <Laptop size={29} />
@@ -374,20 +441,14 @@ export function FutureSection() {
           协作就可以开始。
         </h2>
         <p>
-          发起邀请的，也可以是托管机器上的
-          Agent。把一次需要判断的工作交到你熟悉的工具里，再沿着原来的 Session
-          继续。
+          我们正在探索：让托管机器上的 Agent 在需要人参与时主动发出邀请，
+          把工作现场带到你熟悉的工具里，再沿着原来的 Session 继续。
         </p>
         <div className="future-scope">
-          <Users size={17} />
-          <span>多人共读与讨论</span>
-          <span className="future-dot">·</span>
           <Server size={17} />
           <span>Agent 自主邀请</span>
         </div>
-        <small>
-          以上为产品方向。当前版本以发起者与一位受邀者的协作为基础。
-        </small>
+        <small>Agent 自主判断并邀请人参与，仍是产品方向。</small>
       </div>
       <div className="future-scenario">
         <div className="scenario-origin">
@@ -416,20 +477,32 @@ export function FutureSection() {
 
 const faqs = [
   [
+    "只是想分享一段调查，也能用吗？",
+    "可以。选择已结束对话的公开范围，预览后创建只读空间。它不创建原生 fork，也不开放执行目录；同事可以阅读、批注，并分享各自的会话材料。",
+  ],
+  [
+    "几位同事可以一起参与吗？",
+    "可以，一份邀请链接可供多位同事加入，每个人都有独立身份。大家可以同时阅读、发布材料和讨论；启用共同执行后，同一时刻只有一位输入者，由发起者明确交接。",
+  ],
+  [
+    "分享后，新的对话会自动公开吗？",
+    "只读材料固定在你选定并预览过的范围。之后的新对话不会自动公开，需要你主动发布新版本；已有批注和引用仍指向当时的版本。撤回可停止后续读取，已经被读到的内容无法收回。",
+  ],
+  [
     "协作必须打开 Team Cross 的 WebGUI 吗？",
-    "WebGUI 是可选的上下文与协作视图。通过个人 Agent 的 MCP 可以阅读、批注和回复；直接操作使用对应 Provider 的原生客户端。终端管理操作按文档中的实际 CLI 或本机 API 入口完成。",
+    "WebGUI 是可选的阅读与协作视图。个人 Codex 或 Claude Code 可通过 MCP 按你的指令分享材料、阅读和回复讨论；终端也有相应 CLI 入口。共同执行时，使用对应的原生 TUI 或 Codex 专用 Desktop。",
+  ],
+  [
+    "需要一起修改代码时，会发生什么？",
+    "发起者确认来源、工作目录和权限模式，创建新的原生协作 fork，再向指定同事开放完整历史与执行目录、交接输入。原来的材料与讨论保留；同事使用自己的客户端，执行留在发起者的 Mac。也可以直接从 Session 发起执行协作。",
   ],
   [
     "需要把同事的仓库复制到我的电脑上吗？",
-    "查看共享上下文无需先准备本地仓库。共享会话、模型调用和代码执行保留在发起者主机。个人辅助 Agent 的会话与上下文仍在你本机。",
-  ],
-  [
-    "分享之后，原来的 Session 会怎样？",
-    "Team Cross 从所选来源创建新的原生协作 fork。可以保留原目录，也可以从确认的 HEAD 创建干净 worktree。结束共享会关闭远端访问，会话和代码继续保留。",
+    "阅读已发布材料无需先准备本地仓库。共同执行的会话、模型调用和代码操作留在发起者主机；个人辅助 Agent 的对话与模型调用仍在各自本机。发起者需保持 Team Cross 运行，供同事连接。",
   ],
   [
     "目前支持哪些系统和原生客户端？",
-    "当前面向 Apple Silicon、macOS 14 及以上。Codex 支持本机 TUI 与专用于协作的 Desktop；个人 Codex TUI/Desktop、Claude Code TUI 可通过 MCP 辅助。Claude Code 原生 TUI 直接接入与 Tailcat 连接为实验性，具体范围以对应版本文档为准。",
+    "面向 Apple Silicon、macOS 14 及以上。Codex 支持原生 TUI 和专用于协作的 Desktop；个人 Codex TUI/Desktop、Claude Code TUI 可通过 MCP 辅助。Claude Code 原生 TUI 直接接入与 Tailcat 连接为实验性。下载与安装范围以对应 Release 为准。",
   ],
 ];
 
@@ -458,7 +531,7 @@ export function StartSection() {
       >
         <div>
           <span className="overline">开始前，几件你可能想知道的事</span>
-          <h2 id="faq-title">把边界说清楚。</h2>
+          <h2 id="faq-title">从你想做的事开始。</h2>
           <a
             className="text-link"
             href={`${repository}#readme`}
@@ -500,7 +573,7 @@ export function StartSection() {
             <br />
             “帮我看一下”开始。
           </h2>
-          <p>带上你的工具，邀请一个同事，一起继续这次工作。</p>
+          <p>选一段值得讨论的 Session，邀请同事带上各自的发现。</p>
           <a
             className="button download-button"
             href={`${repository}/releases`}
