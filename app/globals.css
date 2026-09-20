@@ -1865,13 +1865,15 @@ h2 {
 .network-wire > i::after {
   right: 0;
 }
-.network-wire.tailcat > svg {
+.network-wire > i > svg {
   position: absolute;
   left: 50%;
-  top: 30px;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: content-box;
+  padding: 0 8px;
   background: #fff;
-  color: #7598cb;
+  color: #b2c6e7;
 }
 .network-panel > p {
   color: #7a8da6;

@@ -402,10 +402,11 @@ export function ConnectionSection() {
               <span>邀请者</span>
               <small>网络 A</small>
             </div>
-            <div className="network-wire tailcat">
+            <div className="network-wire">
               <span>Tailcat</span>
-              <i />
-              <Globe size={19} />
+              <i>
+                <Globe size={18} strokeWidth={1.75} aria-hidden="true" />
+              </i>
             </div>
             <div className="network-machine">
               <Laptop size={29} />
