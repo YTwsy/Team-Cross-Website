@@ -140,7 +140,7 @@ export function WhySection() {
         <div>
           Codex<span>·</span>Claude Code<span>·</span>T3 Code<span>·</span>Paseo
           <span>·</span>Lody
-          <span>·</span>Warp + tmux<span>·</span>Herdr
+          <span>·</span>Warp + Tmux<span>·</span>Herdr
         </div>
         <p>围绕可接入的原生 Session 协作，具体接入范围以对应版本文档为准。</p>
       </div>
@@ -348,7 +348,7 @@ export function ConnectionSection() {
         <div className="connection-facts">
           <span>
             <Check size={15} />
-            无需 Team Cross 账号
+            没有云端后端
           </span>
           <span>
             <Check size={15} />

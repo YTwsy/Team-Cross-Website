@@ -84,7 +84,7 @@ export default function Home() {
           <div className="hero-notes">
             <span>
               <Check size={14} />
-              无需 Team Cross 账号
+              没有云端后端
             </span>
             <span>
               <Check size={14} />

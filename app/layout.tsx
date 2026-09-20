@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "Team Cross — 你的工具，就是协作的入口",
   description:
-    "从一段 Agent Session 开始，分享选定内容。邀请同事带上各自的调查与 Agent，一起阅读、引用和讨论，需要时再用原生客户端接力执行。无需 Team Cross 账号，WebGUI 可选。",
+    "从一段 Agent Session 开始，分享选定内容。邀请同事带上各自的调查与 Agent，一起阅读、引用和讨论，需要时再用原生客户端接力执行。没有云端后端，WebGUI 可选。",
   alternates: {
     canonical: "/",
   },
