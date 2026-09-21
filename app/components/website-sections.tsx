@@ -136,7 +136,7 @@ export function WhySection() {
         </article>
       </div>
       <div className="workflow-strip">
-        <span>你已经在用的工作方式</span>
+        <span>你已经在用的 Agent，和你已经习惯用来组织它们的 Agent 入口</span>
         <div>
           Codex<span>·</span>Claude Code<span>·</span>T3 Code<span>·</span>Paseo
           <span>·</span>Lody
