@@ -750,13 +750,6 @@ export function SessionDemo() {
       id="demo"
       aria-labelledby="session-demo-title"
     >
-      <div className="demo-toolbar">
-        <span className="demo-kicker">
-          <Play size={12} fill="currentColor" aria-hidden="true" />
-          协作演示
-        </span>
-        <span className="demo-label">示例内容</span>
-      </div>
       <Tabs
         className="collaboration-demo"
         value={scenario}
@@ -766,12 +759,18 @@ export function SessionDemo() {
         }}
       >
         <div className="demo-heading">
-          <div className="demo-title" key={scenario}>
-            <h2 id="session-demo-title">
-              {scenario === "discuss"
-                ? "各自的 Agent 材料，一起用起来。"
-                : "下一步，交给同事继续。"}
-            </h2>
+          <div className="demo-copy">
+            <div className="demo-kicker">
+              <span className="overline">协作演示</span>
+              <span className="demo-sample">示例内容</span>
+            </div>
+            <div className="demo-title" key={scenario}>
+              <h2 id="session-demo-title">
+                {scenario === "discuss"
+                  ? "各自的 Agent 材料，一起用起来。"
+                  : "下一步，交给 Ta 继续。"}
+              </h2>
+            </div>
           </div>
           <TabsList
             className="scenario-tabs"
