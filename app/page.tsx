@@ -63,9 +63,9 @@ export default function Home() {
             <span>就是协作的入口。</span>
           </h1>
           <p className="hero-description">
-            从一段 Agent Session 开始，分享你选择的内容。
+            带上各自的 Codex、Claude Code 会话材料，一起看清问题。
             <br className="desktop-break" />
-            同事带上自己的调查和 Agent，一起讨论，需要时再接力执行。
+            需要一起动手时，把共享会话的输入交给同事，接着做。
           </p>
           <div className="hero-actions">
             <a className="button primary" href="#demo">
@@ -92,7 +92,7 @@ export default function Home() {
             </span>
             <span>
               <Check size={14} />
-              多人阅读与讨论
+              各自带来会话材料
             </span>
           </div>
         </section>

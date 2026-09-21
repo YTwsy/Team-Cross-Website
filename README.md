@@ -24,7 +24,7 @@ npm run preview
 ## 页面与内容
 
 - `app/page.tsx`：导航、首屏与页面组织。
-- `app/components/session-demo.tsx`：先分享讨论 / 共同继续执行两个五步交互场景；手动播放、切换场景和后台页面均有暂停处理。
+- `app/components/session-demo.tsx`：前后相邻的材料讨论（四步）与输入接力（五步）演示；保留深浅原生窗口，展示三位成员的材料来源、材料汇入和固定版本引用，以及输入交接和固定执行主机。两段分别播放，同一时刻只播放一段；手动操作、离开可见区域、后台页面与减少动态效果均有暂停处理。
 - `app/components/website-sections.tsx`：工作流痛点、参与方式、可选 WebGUI、LAN / Tailcat、产品方向、FAQ、下载与复制安装命令。
 - `app/globals.css`：品牌样式、响应式布局、交互与减少动态效果支持。
 - `app/layout.tsx`：中文页面、标题、描述、Open Graph / Twitter 文字元数据和图标。
