@@ -24,7 +24,7 @@ npm run preview
 ## 页面与内容
 
 - `app/page.tsx`：导航、首屏与页面组织。
-- `app/components/session-demo.tsx`：前后相邻的材料讨论（四步）与输入接力（五步）演示；保留深浅原生窗口，展示三位成员的材料来源、材料汇入和固定版本引用，以及输入交接和固定执行主机。两段分别播放，同一时刻只播放一段；手动操作、离开可见区域、后台页面与减少动态效果均有暂停处理。
+- `app/components/session-demo.tsx`：同一区域以两个 Tab 切换材料讨论（四步）与输入接力（五步）；共用标题区与步骤栏，保留深浅原生窗口，紧凑展示三位成员的材料来源、材料汇入和固定版本引用，以及输入交接和固定执行主机。Tab 切换保留各自进度并暂停播放，支持键盘切换；桌面场景交叠过渡，手机按当前场景自然排布。手动操作、离开可见区域、后台页面与减少动态效果均有暂停处理。
 - `app/components/website-sections.tsx`：工作流痛点、参与方式、可选 WebGUI、LAN / Tailcat、产品方向、FAQ、下载与复制安装命令。
 - `app/globals.css`：品牌样式、响应式布局、交互与减少动态效果支持。
 - `app/layout.tsx`：中文页面、标题、描述、Open Graph / Twitter 文字元数据和图标。
@@ -46,4 +46,4 @@ npm run preview
 
 canonical、sitemap 和 robots 使用 `https://teamcross.pages.dev`。当前不生成未经请求的社交分享图。下载与文档直接链接产品的 GitHub Releases 和 README。
 
-发布前运行类型检查、静态构建，并复核桌面与手机上的两个场景的全部步骤与播放/暂停、四种参与方式标签、可选 WebGUI 材料切换与工具过程展开、LAN / Tailcat、FAQ、安装命令复制及键盘操作和减少动态效果。
+发布前运行类型检查、静态构建，并复核桌面与手机上的演示 Tab 切换与进度保留、两个场景的全部步骤与播放/暂停、四种参与方式标签、可选 WebGUI 材料切换与工具过程展开、LAN / Tailcat、FAQ、安装命令复制及键盘操作和减少动态效果。

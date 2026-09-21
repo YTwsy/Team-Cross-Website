@@ -2,12 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowDown,
   ArrowRight,
   Check,
   FileText,
-  GitBranch,
   Keyboard,
   MessageSquare,
   Monitor,
@@ -164,10 +163,9 @@ function SourceWindow({ index, step }: { index: 0 | 1; step: number }) {
             <p>{personal ? "同事已经做过的复现" : "从已经做过的调查开始"}</p>
           </div>
         </div>
-        <div className="source-turn outside-range">
-          <span>先前的工作</span>
-          <p>{personal ? "整理其他问题的复现记录" : "整理本地开发环境"}</p>
-          <small>不在本次公开范围</small>
+        <div className="outside-range">
+          <span aria-hidden="true">···</span>
+          先前的对话未选入本次分享
         </div>
         <div className="source-selection" data-material-source={material.id}>
           <div className="range-label">
@@ -204,12 +202,14 @@ function SourceWindow({ index, step }: { index: 0 | 1; step: number }) {
 
 function DiscussionScene({
   step,
+  active,
   reducedMotion,
   selectedMaterial,
   onSelect,
   next,
 }: {
   step: number;
+  active: boolean;
   reducedMotion: boolean;
   selectedMaterial: number | null;
   onSelect: (index: number | null) => void;
@@ -221,7 +221,7 @@ function DiscussionScene({
 
   useEffect(() => {
     const root = stage.current;
-    if (!root || step !== 1 || reducedMotion) return;
+    if (!root || !active || step !== 1 || reducedMotion) return;
     const bounds = root.getBoundingClientRect();
     const flights = materials.flatMap((material, index) => {
       const source = root.querySelector<HTMLElement>(
@@ -271,27 +271,28 @@ function DiscussionScene({
         animation.cancel();
         card.remove();
       });
-  }, [step, reducedMotion]);
+  }, [step, active, reducedMotion]);
 
   return (
     <div className="native-stage discussion-stage" data-step={step} ref={stage}>
       <SourceWindow index={0} step={step} />
-      <Bridge />
-      <SourceWindow index={1} step={step} />
-      <div className="contributor-session" data-material-source="kai">
-        <span className="contributor-avatar" aria-hidden="true">
-          K
-        </span>
-        <div>
-          <strong>Kai 的 Codex Session</strong>
-          <span>站内跳转约定 · 第 1—2 轮</span>
+      <div className="discussion-bridge">
+        <Bridge />
+        <div className="contributor-session" data-material-source="kai">
+          <span className="contributor-avatar" aria-hidden="true">
+            K
+          </span>
+          <div>
+            <strong>Kai · Codex</strong>
+            <span>站内跳转约定</span>
+          </div>
+          <span className="contributor-status">
+            <FileText size={12} />
+            {step === 0 ? "选定第 1—2 轮" : "已发布 v1"}
+          </span>
         </div>
-        <p>“合法的站内路径也要保留。”</p>
-        <span className="contributor-status">
-          <FileText size={13} />
-          {step === 0 ? "也带来一份材料" : "已发布 v1"}
-        </span>
       </div>
+      <SourceWindow index={1} step={step} />
       <div className="shared-materials">
         <div className="shared-materials-heading">
           <div>
@@ -470,20 +471,13 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
           <span className="source-provider">Codex</span>
         </div>
         <div className="terminal-body">
-          <div className="terminal-location">
-            <span>~/projects/checkout</span>
-            <span>
-              <GitBranch size={12} />
-              main
-            </span>
-          </div>
           <div className="terminal-agent">
             <span className="agent-symbol" aria-hidden="true">
               ✳
             </span>
             <div>
               <strong>修复登录回跳</strong>
-              <p>从 Lin 的 Codex Session 创建的原生 fork</p>
+              <p>~/projects/checkout · 新的原生 fork</p>
             </div>
           </div>
           <p className="terminal-prompt">
@@ -491,11 +485,6 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
             {step >= 3
               ? "补上同源校验，并保留合法站内路径。"
               : "材料与讨论都在，等待下一步输入。"}
-          </p>
-          <p className="terminal-reply">
-            {step >= 3
-              ? "已补上回跳地址检查，合法站内路径继续保留。"
-              : "一起看清的问题，可以沿着这个会话继续。"}
           </p>
           <div className="terminal-file">
             <span>src/auth/redirect.ts</span>
@@ -570,24 +559,8 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
               ][step]
             }
           </div>
-          <div className="tool-receipt">
-            <Check size={14} />
-            <span>
-              {
-                [
-                  "新的原生 fork 已准备好",
-                  "访问已开放 · 输入仍在 Lin",
-                  "当前输入者：Mei",
-                  "输入已提交给共享会话",
-                  "当前输入者：Lin",
-                ][step]
-              }
-            </span>
-          </div>
           <p className="agent-response">
-            {step === 3
-              ? "Mei 使用自己的客户端操作，修改与模型调用在 Lin 的 Mac 上完成。"
-              : "个人 Claude Code 的调查仍在材料区，这里接入的是共享的 Codex 会话。"}
+            接入共享的 Codex 会话，个人 Claude Code 材料继续保留。
           </p>
           <div
             className={`personal-input ${remote ? "input-available" : "input-view-only"}`}
@@ -701,10 +674,11 @@ function DemoControls({
 }
 
 export function SessionDemo() {
+  const [scenario, setScenario] = useState<Scenario>("discuss");
   const [steps, setSteps] = useState({ discuss: 0, execute: 0 });
   const [playing, setPlaying] = useState<Scenario | null>(null);
   const [selectedMaterial, setSelectedMaterial] = useState<number | null>(null);
-  const chapters = useRef<Partial<Record<Scenario, HTMLElement | null>>>({});
+  const panels = useRef<HTMLDivElement>(null);
   const reducedMotion = useSyncExternalStore(
     subscribeToMotion,
     prefersReducedMotion,
@@ -742,8 +716,8 @@ export function SessionDemo() {
   }, []);
 
   useEffect(() => {
-    const chapter = playing ? chapters.current[playing] : null;
-    if (!chapter) return;
+    const chapter = panels.current;
+    if (!playing || !chapter) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) setPlaying(null);
     });
@@ -774,90 +748,101 @@ export function SessionDemo() {
     <section
       className="demo-section container"
       id="demo"
-      aria-label="体验一次 Session 协作"
+      aria-labelledby="session-demo-title"
     >
-      <section
-        className="demo-chapter"
-        aria-labelledby="materials-demo-title"
-        ref={(element) => {
-          chapters.current.discuss = element;
+      <div className="demo-toolbar">
+        <span className="demo-kicker">
+          <Play size={12} fill="currentColor" aria-hidden="true" />
+          协作演示
+        </span>
+        <span className="demo-label">示例内容</span>
+      </div>
+      <Tabs
+        className="collaboration-demo"
+        value={scenario}
+        onValueChange={(value) => {
+          setPlaying(null);
+          setScenario(value as Scenario);
         }}
       >
-        <div className="demo-toolbar">
-          <span className="overline">01 · 各自带来，一起讨论</span>
-          <span className="demo-label">交互演示 · 示例内容</span>
-        </div>
         <div className="demo-heading">
-          <div>
-            <h2 id="materials-demo-title">各自的 Agent 材料，一起用起来。</h2>
-            <p>你的调查、同事的复现，各自的 Session 都能成为共同的依据。</p>
+          <div className="demo-title" key={scenario}>
+            <h2 id="session-demo-title">
+              {scenario === "discuss"
+                ? "各自的 Agent 材料，一起用起来。"
+                : "下一步，交给同事继续。"}
+            </h2>
           </div>
-          <a className="demo-jump" href="#handoff">
-            看看输入接力
-            <ArrowDown size={15} />
-          </a>
+          <TabsList
+            className="scenario-tabs"
+            aria-label="选择协作演示场景"
+            data-scenario={scenario}
+          >
+            <TabsTrigger value="discuss">
+              <FileText size={16} />
+              材料与讨论
+            </TabsTrigger>
+            <TabsTrigger value="execute">
+              <Keyboard size={16} />
+              输入接力
+            </TabsTrigger>
+          </TabsList>
         </div>
         <DemoControls
-          scenario="discuss"
-          step={steps.discuss}
-          playing={playing === "discuss" && !reducedMotion}
+          scenario={scenario}
+          step={steps[scenario]}
+          playing={playing === scenario && !reducedMotion}
           reducedMotion={reducedMotion}
-          choose={(step) => choose("discuss", step)}
-          togglePlayback={() => togglePlayback("discuss")}
+          choose={(step) => choose(scenario, step)}
+          togglePlayback={() => togglePlayback(scenario)}
         />
-        <DiscussionScene
-          step={steps.discuss}
-          reducedMotion={reducedMotion}
-          selectedMaterial={selectedMaterial}
-          onSelect={(index) => {
-            setPlaying(null);
-            setSelectedMaterial(index);
-          }}
-          next={() => next("discuss")}
-        />
-        <div className="demo-takeaway">
-          <span>
-            <Check size={15} />
-            阅读和讨论，本身就是一次完整的协作。
-          </span>
-          <span>选定范围 · 固定版本 · 各自贡献</span>
+        <div className="demo-panels" ref={panels}>
+          <TabsContent
+            value="discuss"
+            className="demo-chapter"
+            forceMount
+            inert={scenario !== "discuss"}
+            aria-hidden={scenario !== "discuss"}
+            tabIndex={scenario === "discuss" ? 0 : -1}
+          >
+            <DiscussionScene
+              step={steps.discuss}
+              active={scenario === "discuss"}
+              reducedMotion={reducedMotion}
+              selectedMaterial={selectedMaterial}
+              onSelect={(index) => {
+                setPlaying(null);
+                setSelectedMaterial(index);
+              }}
+              next={() => next("discuss")}
+            />
+            <div className="demo-takeaway">
+              <span>
+                <Check size={15} />
+                阅读和讨论，本身就是一次完整的协作。
+              </span>
+              <span>选定范围 · 固定版本 · 各自贡献</span>
+            </div>
+          </TabsContent>
+          <TabsContent
+            value="execute"
+            className="demo-chapter"
+            forceMount
+            inert={scenario !== "execute"}
+            aria-hidden={scenario !== "execute"}
+            tabIndex={scenario === "execute" ? 0 : -1}
+          >
+            <ExecutionScene step={steps.execute} next={() => next("execute")} />
+            <div className="demo-takeaway">
+              <span>
+                <Check size={15} />
+                执行留在发起者主机，各自使用自己的客户端。
+              </span>
+              <span>新的原生 fork · 明确开放访问 · 输入接力</span>
+            </div>
+          </TabsContent>
         </div>
-      </section>
-      <section
-        className="demo-chapter handoff-chapter"
-        id="handoff"
-        aria-labelledby="handoff-demo-title"
-        ref={(element) => {
-          chapters.current.execute = element;
-        }}
-      >
-        <div className="demo-toolbar">
-          <span className="overline">02 · 需要一起动手时</span>
-          <span className="demo-label">按需启用 · 明确交接</span>
-        </div>
-        <div className="demo-heading">
-          <div>
-            <h2 id="handoff-demo-title">下一步，交给同事继续。</h2>
-            <p>接过输入，在熟悉的客户端里处理，再把输入交还。</p>
-          </div>
-        </div>
-        <DemoControls
-          scenario="execute"
-          step={steps.execute}
-          playing={playing === "execute" && !reducedMotion}
-          reducedMotion={reducedMotion}
-          choose={(step) => choose("execute", step)}
-          togglePlayback={() => togglePlayback("execute")}
-        />
-        <ExecutionScene step={steps.execute} next={() => next("execute")} />
-        <div className="demo-takeaway">
-          <span>
-            <Check size={15} />
-            执行留在发起者主机，大家继续使用自己的客户端。
-          </span>
-          <span>新的原生 fork · 明确开放访问 · 输入接力</span>
-        </div>
-      </section>
+      </Tabs>
     </section>
   );
 }
