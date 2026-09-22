@@ -156,8 +156,28 @@ img {
   color: #596678;
 }
 .nav-links a:hover,
-.github-link:hover {
+.github-link:hover,
+.language-link:hover {
   color: var(--blue);
+}
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.language-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #dce2ea;
+  border-radius: 7px;
+  background: #fff;
+  color: #596678;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
 }
 .github-link {
   display: flex;
@@ -1767,6 +1787,14 @@ h2 {
   .github-link {
     font-size: 13px;
   }
+  .nav-actions {
+    gap: 9px;
+  }
+  .language-link {
+    min-height: 32px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
   .hero {
     padding: 55px 0 40px;
   }
@@ -1916,6 +1944,12 @@ h2 {
   }
 }
 @media (max-width: 390px) {
+  .github-link {
+    gap: 4px;
+  }
+  .github-link > span {
+    display: none;
+  }
   h1 {
     font-size: 41px;
   }

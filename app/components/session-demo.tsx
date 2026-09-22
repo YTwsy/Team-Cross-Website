@@ -16,79 +16,17 @@ import {
   Users,
 } from "lucide-react";
 
-const scenarios = {
-  discuss: {
-    name: "材料与讨论",
-    steps: ["各自的材料", "汇入空间", "引用讨论", "Agent 辅助"],
-    short: ["材料", "发布", "讨论", "Agent"],
-    captions: [
-      "Lin、Mei 和 Kai 各自选一段已经完成的会话。不同 Agent 的发现，从这里走到一起。",
-      "同事通过邀请加入，各自预览并发布选定的材料。个人会话继续保留，新内容由作者决定何时再分享。",
-      "引用三份材料的具体版本，在原文旁讨论。材料更新后，已有引用仍保留当时的版本。",
-      "Mei 让自己的 Claude Code 通过 MCP 按需读取材料、核对依据并回复，继续使用自己的个人会话。",
-    ],
-    actions: [
-      "把选定材料带进来",
-      "看看大家如何讨论",
-      "让个人 Agent 帮忙核对",
-      "重新看材料汇入",
-    ],
-  },
-  execute: {
-    name: "输入接力",
-    steps: ["启用执行", "开放访问", "交接输入", "原生继续", "交还输入"],
-    short: ["启用", "访问", "交接", "继续", "交还"],
-    captions: [
-      "需要一起动手时，Lin 确认来源、工作目录与权限模式，创建新的原生协作 fork。材料与讨论继续保留。",
-      "Lin 向 Mei 明确开放完整原生历史与工作目录。访问已开放，输入仍然归 Lin。",
-      "Lin 将输入交给 Mei。当前输入者变了，执行主机保持不变，Kai 仍可继续阅读与讨论。",
-      "Mei 在对应的 Codex 原生客户端继续输入。模型调用、代码修改与执行都在 Lin 的 Mac。",
-      "完成这一段，Mei 把输入交还给 Lin。大家贡献的材料与讨论仍在，沿着这次工作继续。",
-    ],
-    actions: [
-      "向 Mei 开放执行访问",
-      "把输入交给 Mei",
-      "看看 Mei 如何继续",
-      "Mei 交还输入",
-      "重新看输入接力",
-    ],
-  },
-} as const;
+import {
+  sessionDemoCopy,
+  type DemoScenario,
+} from "../content/session-demo";
+import { useLocale } from "./locale-context";
 
-type Scenario = keyof typeof scenarios;
+type Scenario = DemoScenario;
 
-const materials = [
-  {
-    id: "lin",
-    author: "Lin",
-    provider: "Codex",
-    title: "登录回跳调查",
-    range: "第 2—3 轮",
-    question: "登录后，为什么会跳到外部地址？",
-    finding: "回跳参数缺少同源校验。",
-    reference: "Lin 的调查 · v1",
-  },
-  {
-    id: "mei",
-    author: "Mei",
-    provider: "Claude Code",
-    title: "外部地址复现",
-    range: "第 4—5 轮",
-    question: "试一下外部 URL 和 // 开头的地址。",
-    finding: "两种写法都能复现，需要一起检查。",
-    reference: "Mei 的复现 · v1",
-  },
-  {
-    id: "kai",
-    author: "Kai",
-    provider: "Codex",
-    title: "站内跳转约定",
-    range: "第 1—2 轮",
-    question: "哪些登录后的回跳路径需要保留？",
-    finding: "合法的站内路径应继续保留。",
-    reference: "Kai 的约定 · v1",
-  },
-] as const;
+function useDemoCopy() {
+  return sessionDemoCopy[useLocale()];
+}
 
 function subscribeToMotion(callback: () => void) {
   const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -111,6 +49,9 @@ function TrafficLights() {
 }
 
 function Bridge({ execution = false }: { execution?: boolean }) {
+  const copy = useDemoCopy().bridge;
+  const labels = execution ? copy.executeLabels : copy.discussLabels;
+
   return (
     <div className="session-bridge">
       <div className="bridge-line" aria-hidden="true" />
@@ -118,20 +59,11 @@ function Bridge({ execution = false }: { execution?: boolean }) {
         <Image src="/brand-mark.svg" width="20" height="20" alt="" />
       </div>
       <div className="session-legend">
-        <p>{execution ? "同一个协作会话" : "各自的发现，一起用"}</p>
+        <p>{execution ? copy.executeTitle : copy.discussTitle}</p>
         <ul className="bridge-label">
-          {execution ? (
-            <>
-              <li>原生 fork</li>
-              <li>输入接力</li>
-            </>
-          ) : (
-            <>
-              <li>材料</li>
-              <li>引用</li>
-              <li>讨论</li>
-            </>
-          )}
+          {labels.map((label) => (
+            <li key={label}>{label}</li>
+          ))}
         </ul>
       </div>
     </div>
@@ -139,7 +71,9 @@ function Bridge({ execution = false }: { execution?: boolean }) {
 }
 
 function SourceWindow({ index, step }: { index: 0 | 1; step: number }) {
-  const material = materials[index];
+  const copy = useDemoCopy();
+  const material = copy.materials[index];
+  const source = copy.source;
   const personal = index === 1;
   return (
     <div
@@ -149,7 +83,7 @@ function SourceWindow({ index, step }: { index: 0 | 1; step: number }) {
         <TrafficLights />
         <span>
           <Terminal size={13} />
-          {material.author} 的 Session
+          {source.sessionLabel(material.author)}
         </span>
         <span className="source-provider">{material.provider}</span>
       </div>
@@ -160,24 +94,30 @@ function SourceWindow({ index, step }: { index: 0 | 1; step: number }) {
           </span>
           <div>
             <strong>{material.title}</strong>
-            <p>{personal ? "同事已经做过的复现" : "从已经做过的调查开始"}</p>
+            <p>
+              {personal ? source.personalDescription : source.hostDescription}
+            </p>
           </div>
         </div>
         <div className="outside-range">
           <span aria-hidden="true">···</span>
-          先前的对话未选入本次分享
+          {source.outsideRange}
         </div>
         <div className="source-selection" data-material-source={material.id}>
           <div className="range-label">
             <Check size={13} />
-            本次公开范围 · {material.range}
+            {source.publicRange} · {material.range}
           </div>
           <div className="source-turn">
-            <span>{personal ? "04 · 尝试复现" : "02 · 定位问题"}</span>
+            <span>
+              {personal ? source.personalFirstTurn : source.hostFirstTurn}
+            </span>
             <p>{material.question}</p>
           </div>
           <div className="source-turn">
-            <span>{personal ? "05 · 核对结果" : "03 · 核对实现"}</span>
+            <span>
+              {personal ? source.personalSecondTurn : source.hostSecondTurn}
+            </span>
             <p>{material.finding}</p>
           </div>
         </div>
@@ -185,16 +125,16 @@ function SourceWindow({ index, step }: { index: 0 | 1; step: number }) {
           <Check size={14} />
           <span>
             {personal && step === 3
-              ? "按 Mei 的指令，已核对三份共享材料"
+              ? source.agentChecked
               : step === 0
-                ? "选好这一段，预览后再发布"
-                : `${material.title} v1 · 已发布`}
+                ? source.previewFirst
+                : source.published(material.title)}
           </span>
         </div>
       </div>
       <div className="window-status">
-        <span>个人会话继续保留</span>
-        <span>公开范围由自己决定</span>
+        <span>{source.sessionKept}</span>
+        <span>{source.scopeOwned}</span>
       </div>
     </div>
   );
@@ -215,6 +155,9 @@ function DiscussionScene({
   onSelect: (index: number | null) => void;
   next: () => void;
 }) {
+  const copy = useDemoCopy();
+  const materials = copy.materials;
+  const discussion = copy.discussion;
   const stage = useRef<HTMLDivElement>(null);
   const selected =
     selectedMaterial === null ? null : materials[selectedMaterial];
@@ -271,7 +214,7 @@ function DiscussionScene({
         animation.cancel();
         card.remove();
       });
-  }, [step, active, reducedMotion]);
+  }, [step, active, reducedMotion, materials]);
 
   return (
     <div className="native-stage discussion-stage" data-step={step} ref={stage}>
@@ -284,11 +227,13 @@ function DiscussionScene({
           </span>
           <div>
             <strong>Kai · Codex</strong>
-            <span>站内跳转约定</span>
+            <span>{materials[2].title}</span>
           </div>
           <span className="contributor-status">
             <FileText size={12} />
-            {step === 0 ? "选定第 1—2 轮" : "已发布 v1"}
+            {step === 0
+              ? discussion.contributorSelected
+              : discussion.contributorPublished}
           </span>
         </div>
       </div>
@@ -299,20 +244,20 @@ function DiscussionScene({
             <Users size={16} />
             <strong>
               {step === 0
-                ? "各自选一段，带进这次讨论。"
-                : "同一个空间，三个人的发现。"}
+                ? discussion.headingBefore
+                : discussion.headingAfter}
             </strong>
           </div>
           <span>
             {step === 0
-              ? "已选片段 · 可点开预览"
-              : "已发布材料 · 可查看固定版本"}
+              ? discussion.statusBefore
+              : discussion.statusAfter}
           </span>
         </div>
         <div
           className="shared-material-grid"
           role="group"
-          aria-label="查看各自的会话材料"
+          aria-label={discussion.materialsAriaLabel}
         >
           {materials.map((material, index) => (
             <button
@@ -332,7 +277,7 @@ function DiscussionScene({
                   {material.author} · {material.provider} Session
                 </span>
               </div>
-              <small>{step === 0 ? "预览" : "v1"}</small>
+              <small>{step === 0 ? discussion.preview : "v1"}</small>
             </button>
           ))}
         </div>
@@ -342,10 +287,12 @@ function DiscussionScene({
               <div>
                 <span>
                   {selected.author} · {selected.title} · {selected.range}
-                  {step > 0 ? " · v1" : " · 发布前预览"}
+                  {step > 0 ? " · v1" : discussion.prePublishPreview}
                 </span>
                 <button type="button" onClick={() => onSelect(null)}>
-                  {step >= 2 ? "返回讨论" : "收起片段"}
+                  {step >= 2
+                    ? discussion.returnToDiscussion
+                    : discussion.collapseExcerpt}
                 </button>
               </div>
               <p>{selected.finding}</p>
@@ -356,13 +303,13 @@ function DiscussionScene({
               <div>
                 <span>
                   {step === 3
-                    ? "Mei 的个人 Claude Code · MCP 辅助回复"
-                    : "Kai · 引用大家的发现"}
+                    ? discussion.agentReplyLabel
+                    : discussion.citationLabel}
                 </span>
                 <p>
                   {step === 3
-                    ? "已按 Mei 的要求核对三份材料：检查外部 URL 和协议相对地址，同时保留合法站内路径。"
-                    : "Lin 找到了原因，Mei 补上了复现。结合站内跳转约定，这次修改也要保留合法路径。"}
+                    ? discussion.agentReply
+                    : discussion.citationReply}
                 </p>
                 <div className="reference-tags">
                   {materials.map((material, index) => (
@@ -382,18 +329,18 @@ function DiscussionScene({
               <MessageSquare size={17} />
               <p>
                 {step === 0
-                  ? "你带来定位过程，同事补上复现与约定。从各自做过的工作开始。"
-                  : "三份材料都有各自的作者和版本。一起阅读、引用和讨论，无需交接输入。"}
+                  ? discussion.noteBefore
+                  : discussion.noteAfter}
               </p>
             </div>
           )}
         </div>
         <div className="material-scene-actions">
-          <span>只读分享 · 后续对话由作者主动发布</span>
+          <span>{discussion.readOnlyStatus}</span>
           <button type="button" className="inline-action" onClick={next}>
-            {scenarios.discuss.actions[step]}
+            {copy.scenarios.discuss.actions[step]}
             <ArrowRight size={15} />
-            <span className="sr-only">（演示）</span>
+            <span className="sr-only">{copy.controls.demoOnly}</span>
           </button>
         </div>
       </div>
@@ -402,15 +349,10 @@ function DiscussionScene({
 }
 
 function ExecutionScene({ step, next }: { step: number; next: () => void }) {
+  const copy = useDemoCopy();
+  const execution = copy.execution;
   const remote = step === 2 || step === 3;
   const writer = remote ? "Mei" : "Lin";
-  const events = [
-    "已从选定来源创建新的协作 fork",
-    "已向 Mei 开放执行访问 · 输入仍在 Lin",
-    "输入已交给 Mei · 等待 Mei 的下一步输入",
-    "Mei 已提交输入 · 正在 Lin 的 Mac 上处理",
-    "Mei 已交还输入 · Lin 可以继续",
-  ];
   return (
     <div
       className="native-stage execution-stage"
@@ -420,32 +362,36 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
       <div className="handoff-overview">
         <span>
           <Keyboard size={16} />
-          同一时刻，一位当前输入者
+          {execution.oneWriter}
         </span>
         <span className="execution-host">
           <Monitor size={15} />
-          执行：Lin 的 Mac
+          {execution.executionHost}
         </span>
       </div>
       <div
         className="handoff-track"
         role="group"
-        aria-label={`当前输入者：${writer}`}
+        aria-label={execution.currentWriterAria(writer)}
       >
         <div className="handoff-route" aria-hidden="true" />
         <div className="input-baton" aria-hidden="true">
           <Keyboard size={14} />
-          当前输入 · {writer}
+          {execution.currentInput} · {writer}
         </div>
         <div className="handoff-person">
           <span className="avatar">L</span>
           <div>
             <strong>Lin</strong>
-            <span>{remote ? "发起者 · 可以接回" : "可以继续输入"}</span>
+            <span>
+              {remote ? execution.hostCanReclaim : execution.canContinue}
+            </span>
           </div>
         </div>
         <span className="handoff-direction" aria-hidden="true">
-          {step === 4 ? "← 交还" : "交接 →"}
+          {step === 4
+            ? execution.returnDirection
+            : execution.handoffDirection}
         </span>
         <div className="handoff-person">
           <span className="avatar">M</span>
@@ -453,10 +399,10 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
             <strong>Mei</strong>
             <span>
               {remote
-                ? "可以继续输入"
+                ? execution.canContinue
                 : step >= 1
-                  ? "已获访问 · 等待交接"
-                  : "阅读与讨论"}
+                  ? execution.accessWaiting
+                  : execution.discussionOnly}
             </span>
           </div>
         </div>
@@ -466,7 +412,7 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
           <TrafficLights />
           <span>
             <Terminal size={13} />
-            Lin 的协作会话
+            {execution.hostSession}
           </span>
           <span className="source-provider">Codex</span>
         </div>
@@ -476,15 +422,15 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
               ✳
             </span>
             <div>
-              <strong>修复登录回跳</strong>
-              <p>~/projects/checkout · 新的原生 fork</p>
+              <strong>{execution.taskTitle}</strong>
+              <p>{execution.nativeFork}</p>
             </div>
           </div>
           <p className="terminal-prompt">
             <span>›</span>
             {step >= 3
-              ? "补上同源校验，并保留合法站内路径。"
-              : "材料与讨论都在，等待下一步输入。"}
+              ? execution.taskPrompt
+              : execution.waitingPrompt}
           </p>
           <div className="terminal-file">
             <span>src/auth/redirect.ts</span>
@@ -496,14 +442,14 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
           </div>
           <div className="terminal-event" key={step}>
             <Check size={14} />
-            <span>{events[step]}</span>
+            <span>{execution.events[step]}</span>
           </div>
           <div
             className={`terminal-input ${remote ? "input-view-only" : "input-available"}`}
           >
             <span>›</span>
             <span>
-              {remote ? "输入已交给 Mei · Lin 继续查看" : "Lin 可以输入下一步…"}
+              {remote ? execution.handedToMei : execution.linCanType}
             </span>
             {!remote && <i className="cursor" aria-hidden="true" />}
           </div>
@@ -511,9 +457,11 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
         <div className="window-status">
           <span>
             <span className="status-dot" />
-            会话与执行留在这台 Mac
+            {execution.staysOnMac}
           </span>
-          <span>{remote ? "查看中" : "当前输入者"}</span>
+          <span>
+            {remote ? execution.viewing : execution.currentWriter}
+          </span>
         </div>
       </div>
       <Bridge execution />
@@ -522,7 +470,7 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
           <TrafficLights />
           <span>
             <Monitor size={13} />
-            {remote ? "Mei 的原生客户端" : "Mei 的协作视图"}
+            {remote ? execution.nativeClient : execution.collaborationView}
           </span>
           <span className="source-provider">Codex</span>
         </div>
@@ -530,38 +478,16 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
           <div className="personal-heading">
             <div className="avatar">M</div>
             <div>
-              <strong>
-                {
-                  [
-                    "讨论之后，一起继续",
-                    "访问已开放，输入还没交接",
-                    "这一段，交给 Mei",
-                    "在熟悉的客户端里处理",
-                    "处理好了，交还输入",
-                  ][step]
-                }
-              </strong>
+              <strong>{execution.headings[step]}</strong>
               <p>
                 {remote
-                  ? "原生 TUI / 专用 Codex Desktop"
-                  : "原有材料和讨论继续保留"}
+                  ? execution.nativeClients
+                  : execution.materialsRemain}
               </p>
             </div>
           </div>
-          <div className="personal-message">
-            {
-              [
-                "Lin 启用共同执行，Mei 和 Kai 仍可继续阅读、发布材料与讨论。",
-                "Mei 获得完整原生历史与工作目录访问，等待 Lin 明确交出输入。",
-                "输入已交到 Mei 手里，可以在对应的 Codex 客户端继续这次工作。",
-                "补上同源校验，并保留合法的站内回跳路径。",
-                "这一段已经处理好，交还给 Lin 继续下一步。",
-              ][step]
-            }
-          </div>
-          <p className="agent-response">
-            接入共享的 Codex 会话，个人 Claude Code 材料继续保留。
-          </p>
+          <div className="personal-message">{execution.messages[step]}</div>
+          <p className="agent-response">{execution.agentResponse}</p>
           <div
             className={`personal-input ${remote ? "input-available" : "input-view-only"}`}
           >
@@ -569,36 +495,38 @@ function ExecutionScene({ step, next }: { step: number; next: () => void }) {
             <span>
               {remote
                 ? step === 3
-                  ? "Mei：这一段处理好了。"
-                  : "Mei 可以输入下一步…"
-                : "查看共享进展，继续参与讨论"}
+                  ? execution.meiDone
+                  : execution.meiCanType
+                : execution.keepDiscussing}
             </span>
             {remote && <i className="cursor" aria-hidden="true" />}
           </div>
           <div className="annotation">
             <MessageSquare size={15} />
             <div>
-              <span>Kai · 讨论继续</span>
-              <p>记得保留合法的站内回跳路径。</p>
+              <span>{execution.annotationLabel}</span>
+              <p>{execution.annotation}</p>
             </div>
           </div>
         </div>
         <div className="window-status">
           <span>
-            {remote ? "原生客户端 · 当前输入者" : "阅读与讨论继续开放"}
+            {remote
+              ? execution.nativeCurrentWriter
+              : execution.discussionOpen}
           </span>
-          <span>{remote ? "可以输入" : "输入在 Lin"}</span>
+          <span>{remote ? execution.canType : execution.inputWithLin}</span>
         </div>
       </div>
       <div className="handoff-actions">
         <span>
           <MessageSquare size={15} />
-          其他成员可以一直阅读、发布材料与讨论。
+          {execution.othersContinue}
         </span>
         <button type="button" className="inline-action" onClick={next}>
-          {scenarios.execute.actions[step]}
+          {copy.scenarios.execute.actions[step]}
           <ArrowRight size={15} />
-          <span className="sr-only">（演示）</span>
+          <span className="sr-only">{copy.controls.demoOnly}</span>
         </button>
       </div>
     </div>
@@ -620,14 +548,16 @@ function DemoControls({
   choose: (step: number) => void;
   togglePlayback: () => void;
 }) {
-  const current = scenarios[scenario];
+  const copy = useDemoCopy();
+  const current = copy.scenarios[scenario];
+  const controls = copy.controls;
   return (
     <>
       <div className="demo-controls">
         <div
           className="demo-steps"
           role="group"
-          aria-label={`${current.name}演示步骤`}
+          aria-label={controls.stepsAria(current.name)}
           style={{
             gridTemplateColumns: `repeat(${current.steps.length}, minmax(0, 1fr))`,
           }}
@@ -639,7 +569,7 @@ function DemoControls({
               onClick={() => choose(index)}
               aria-pressed={step === index}
               aria-current={step === index ? "step" : undefined}
-              aria-label={`${current.name}第 ${index + 1} 步：${label}`}
+              aria-label={controls.stepAria(current.name, index + 1, label)}
             >
               <span className="step-number">
                 {String(index + 1).padStart(2, "0")}
@@ -657,8 +587,8 @@ function DemoControls({
           disabled={reducedMotion}
           aria-label={
             reducedMotion
-              ? "已开启减少动态效果，请逐步查看"
-              : `${playing ? "暂停" : "播放"}${current.name}演示`
+              ? controls.reducedMotion
+              : controls.playbackAria(playing, current.name)
           }
           aria-pressed={playing}
           onClick={togglePlayback}
@@ -674,6 +604,8 @@ function DemoControls({
 }
 
 export function SessionDemo() {
+  const copy = useDemoCopy();
+  const scenarios = copy.scenarios;
   const [scenario, setScenario] = useState<Scenario>("discuss");
   const [steps, setSteps] = useState({ discuss: 0, execute: 0 });
   const [playing, setPlaying] = useState<Scenario | null>(null);
@@ -697,7 +629,7 @@ export function SessionDemo() {
         }));
     }, 4500);
     return () => window.clearTimeout(timer);
-  }, [playing, steps, reducedMotion]);
+  }, [playing, steps, reducedMotion, scenarios]);
 
   useEffect(() => {
     const pauseForVisibility = () => {
@@ -761,29 +693,29 @@ export function SessionDemo() {
         <div className="demo-heading">
           <div className="demo-copy">
             <div className="demo-kicker">
-              <span className="overline">协作演示</span>
-              <span className="demo-sample">示例内容</span>
+              <span className="overline">{copy.heading.overline}</span>
+              <span className="demo-sample">{copy.heading.sample}</span>
             </div>
             <div className="demo-title" key={scenario}>
               <h2 id="session-demo-title">
                 {scenario === "discuss"
-                  ? "各自的 Agent 材料，一起用起来。"
-                  : "下一步，交给 Ta 继续。"}
+                  ? copy.heading.discussTitle
+                  : copy.heading.executeTitle}
               </h2>
             </div>
           </div>
           <TabsList
             className="scenario-tabs"
-            aria-label="选择协作演示场景"
+            aria-label={copy.heading.tabsAriaLabel}
             data-scenario={scenario}
           >
             <TabsTrigger value="discuss">
               <FileText size={16} />
-              材料与讨论
+              {copy.heading.discussTab}
             </TabsTrigger>
             <TabsTrigger value="execute">
               <Keyboard size={16} />
-              输入接力
+              {copy.heading.executeTab}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -818,9 +750,9 @@ export function SessionDemo() {
             <div className="demo-takeaway">
               <span>
                 <Check size={15} />
-                阅读和讨论，本身就是一次完整的协作。
+                {copy.takeaways.discussPrimary}
               </span>
-              <span>选定范围 · 固定版本 · 各自贡献</span>
+              <span>{copy.takeaways.discussSecondary}</span>
             </div>
           </TabsContent>
           <TabsContent
@@ -835,9 +767,9 @@ export function SessionDemo() {
             <div className="demo-takeaway">
               <span>
                 <Check size={15} />
-                执行留在发起者主机，各自使用自己的客户端。
+                {copy.takeaways.executePrimary}
               </span>
-              <span>新的原生 fork · 明确开放访问 · 输入接力</span>
+              <span>{copy.takeaways.executeSecondary}</span>
             </div>
           </TabsContent>
         </div>
