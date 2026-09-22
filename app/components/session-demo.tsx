@@ -709,13 +709,13 @@ export function SessionDemo() {
             aria-label={copy.heading.tabsAriaLabel}
             data-scenario={scenario}
           >
-            <TabsTrigger value="discuss">
+            <TabsTrigger value="discuss" className="whitespace-normal">
               <FileText size={16} />
-              {copy.heading.discussTab}
+              <span>{copy.heading.discussTab}</span>
             </TabsTrigger>
-            <TabsTrigger value="execute">
+            <TabsTrigger value="execute" className="whitespace-normal">
               <Keyboard size={16} />
-              {copy.heading.executeTab}
+              <span>{copy.heading.executeTab}</span>
             </TabsTrigger>
           </TabsList>
         </div>

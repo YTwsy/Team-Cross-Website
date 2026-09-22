@@ -810,9 +810,12 @@ h1 span {
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
   flex-shrink: 0;
-  width: 292px;
+  width: fit-content;
+  min-width: 292px;
+  max-width: 100%;
   height: auto;
   padding: 4px;
   border: 1px solid #dce4ef;
@@ -837,12 +840,21 @@ h1 span {
 .scenario-tabs [data-slot="tabs-trigger"] {
   gap: 8px;
   height: auto;
+  min-width: 0;
   min-height: 42px;
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-radius: 8px;
   color: #6b7b93;
   font-size: 13px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  align-self: stretch;
   transition: color 0.2s;
+}
+.scenario-tabs [data-slot="tabs-trigger"] > span {
+  min-width: 0;
+  text-wrap: balance;
 }
 .scenario-tabs [data-slot="tabs-trigger"][data-state="active"] {
   color: #2c60b6;
@@ -1554,9 +1566,6 @@ h1 span {
   .demo-heading {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
-  }
-  .scenario-tabs[data-slot="tabs-list"] {
-    width: min(100%, 340px);
   }
 }
 @media (max-width: 760px) {
