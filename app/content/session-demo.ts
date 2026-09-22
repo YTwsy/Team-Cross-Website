@@ -179,6 +179,8 @@ export const sessionDemoCopy = {
       stepAria: (name: string, index: number, label: string) =>
         `${name}第 ${index} 步：${label}`,
       reducedMotion: "已开启减少动态效果，请逐步查看",
+      scrollHint: "继续向下滚动，逐步看完材料与讨论、输入接力。演示结束后页面自然继续。",
+      manualHint: "点击步骤逐段查看，或按播放按钮观看当前演示。",
       playbackAria: (playing: boolean, name: string) =>
         `${playing ? "暂停" : "播放"}${name}演示`,
       demoOnly: "（演示）",
@@ -393,6 +395,9 @@ export const sessionDemoCopy = {
         `${name}, step ${index}: ${label}`,
       reducedMotion:
         "Reduced motion is enabled. Use the individual steps to view the demo.",
+      scrollHint:
+        "Scroll to step through both flows. The page continues after the demo.",
+      manualHint: "Choose a step, or press play to watch the current flow.",
       playbackAria: (playing: boolean, name: string) =>
         `${playing ? "Pause" : "Play"} the ${name} demo`,
       demoOnly: "(demo)",

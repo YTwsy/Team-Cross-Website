@@ -292,6 +292,19 @@ h1 span {
   padding-bottom: 75px;
   scroll-margin-top: 0;
 }
+.demo-scroll-track[data-scroll-mode="true"] {
+  position: relative;
+}
+.demo-scroll-track[data-scroll-mode="true"]::after {
+  content: "";
+  display: block;
+  height: var(--demo-scroll-runway);
+}
+.demo-scroll-track[data-scroll-mode="true"] > .collaboration-demo {
+  position: sticky;
+  top: 24px;
+  z-index: 1;
+}
 .demo-copy {
   min-width: 0;
 }
@@ -575,6 +588,21 @@ h1 span {
   margin: 0 5px;
   color: #8b9db5;
 }
+html:lang(en) .session-legend {
+  max-width: calc(100% - 16px);
+  margin-inline: 8px;
+}
+html:lang(en) .session-legend > p {
+  white-space: normal;
+  text-wrap: balance;
+}
+html:lang(en) .bridge-label {
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+html:lang(en) .bridge-label li:not(:last-child)::after {
+  content: none;
+}
 .personal-window {
   background: #fff;
 }
@@ -713,6 +741,23 @@ h1 span {
   border-radius: 13px;
   background: #fff;
   box-shadow: 0 4px 16px #263b6105;
+}
+.demo-guidance {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 2px 9px;
+  color: #607088;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.demo-scroll-count {
+  flex-shrink: 0;
+  color: #3264b3;
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 .demo-steps {
   display: grid;
@@ -1230,6 +1275,9 @@ h1 span {
   padding-top: 41px;
   margin-bottom: 14px;
 }
+html:lang(en) .handoff-track {
+  --baton-width: 170px;
+}
 .handoff-route {
   position: absolute;
   top: 17px;
@@ -1655,6 +1703,10 @@ h1 span {
   .handoff-track {
     --bridge-width: 24px;
     --baton-width: 116px;
+  }
+  html:lang(en) .handoff-track {
+    --baton-width: 116px;
+    padding-top: 61px;
   }
   .input-baton > svg,
   .handoff-direction {

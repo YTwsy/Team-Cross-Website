@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowRight,
@@ -23,6 +29,11 @@ import {
 import { useLocale } from "./locale-context";
 
 type Scenario = DemoScenario;
+const SCROLL_STEP_DISTANCE = 280;
+const STICKY_TOP = 24;
+const DISCUSS_STEP_COUNT = sessionDemoCopy.en.scenarios.discuss.steps.length;
+const TOTAL_STEP_COUNT =
+  DISCUSS_STEP_COUNT + sessionDemoCopy.en.scenarios.execute.steps.length;
 
 function useDemoCopy() {
   return sessionDemoCopy[useLocale()];
@@ -537,6 +548,7 @@ function DemoControls({
   scenario,
   step,
   playing,
+  scrollMode,
   reducedMotion,
   choose,
   togglePlayback,
@@ -544,6 +556,7 @@ function DemoControls({
   scenario: Scenario;
   step: number;
   playing: boolean;
+  scrollMode: boolean;
   reducedMotion: boolean;
   choose: (step: number) => void;
   togglePlayback: () => void;
@@ -581,20 +594,22 @@ function DemoControls({
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="play-control"
-          disabled={reducedMotion}
-          aria-label={
-            reducedMotion
-              ? controls.reducedMotion
-              : controls.playbackAria(playing, current.name)
-          }
-          aria-pressed={playing}
-          onClick={togglePlayback}
-        >
-          {playing ? <Pause size={16} /> : <Play size={16} />}
-        </button>
+        {!scrollMode && (
+          <button
+            type="button"
+            className="play-control"
+            disabled={reducedMotion}
+            aria-label={
+              reducedMotion
+                ? controls.reducedMotion
+                : controls.playbackAria(playing, current.name)
+            }
+            aria-pressed={playing}
+            onClick={togglePlayback}
+          >
+            {playing ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+        )}
       </div>
       <p className="demo-caption" aria-live="polite">
         {current.captions[step]}
@@ -609,8 +624,12 @@ export function SessionDemo() {
   const [scenario, setScenario] = useState<Scenario>("discuss");
   const [steps, setSteps] = useState({ discuss: 0, execute: 0 });
   const [playing, setPlaying] = useState<Scenario | null>(null);
+  const [scrollMode, setScrollMode] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<number | null>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const demo = useRef<HTMLDivElement>(null);
   const panels = useRef<HTMLDivElement>(null);
+  const scrollStep = useRef(-1);
   const reducedMotion = useSyncExternalStore(
     subscribeToMotion,
     prefersReducedMotion,
@@ -618,7 +637,68 @@ export function SessionDemo() {
   );
 
   useEffect(() => {
-    if (!playing || reducedMotion) return;
+    const node = demo.current;
+    if (!node) return;
+    const measure = () => {
+      const fits =
+        window.innerWidth > 760 &&
+        node.offsetHeight <= window.innerHeight - STICKY_TOP * 2 &&
+        !reducedMotion;
+      setScrollMode(fits);
+      if (fits) setPlaying(null);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    if (!scrollMode) return;
+    const node = track.current;
+    if (!node) return;
+    scrollStep.current = -1;
+    let frame = 0;
+    const update = () => {
+      const start = node.getBoundingClientRect().top + window.scrollY - STICKY_TOP;
+      const distance = Math.max(0, window.scrollY - start);
+      const index = Math.min(
+        TOTAL_STEP_COUNT - 1,
+        Math.floor(distance / SCROLL_STEP_DISTANCE),
+      );
+      if (index === scrollStep.current) return;
+      scrollStep.current = index;
+      const nextScenario: Scenario =
+        index < DISCUSS_STEP_COUNT ? "discuss" : "execute";
+      const nextStep =
+        index < DISCUSS_STEP_COUNT ? index : index - DISCUSS_STEP_COUNT;
+      setScenario(nextScenario);
+      setSteps((previous) => ({ ...previous, [nextScenario]: nextStep }));
+      setSelectedMaterial(null);
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        update();
+      });
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [scrollMode]);
+
+  useEffect(() => {
+    if (!playing || reducedMotion || scrollMode) return;
     const timer = window.setTimeout(() => {
       if (steps[playing] === scenarios[playing].steps.length - 1)
         setPlaying(null);
@@ -629,7 +709,7 @@ export function SessionDemo() {
         }));
     }, 4500);
     return () => window.clearTimeout(timer);
-  }, [playing, steps, reducedMotion, scenarios]);
+  }, [playing, steps, reducedMotion, scenarios, scrollMode]);
 
   useEffect(() => {
     const pauseForVisibility = () => {
@@ -659,13 +739,28 @@ export function SessionDemo() {
 
   const choose = (scenario: Scenario, step: number) => {
     setPlaying(null);
+    if (scrollMode && track.current) {
+      const index =
+        (scenario === "discuss" ? 0 : DISCUSS_STEP_COUNT) + step;
+      const start =
+        track.current.getBoundingClientRect().top + window.scrollY - STICKY_TOP;
+      scrollStep.current = index;
+      setScenario(scenario);
+      setSteps((previous) => ({ ...previous, [scenario]: step }));
+      setSelectedMaterial(null);
+      window.scrollTo({
+        top: start + (index + 0.5) * SCROLL_STEP_DISTANCE,
+        behavior: "instant",
+      });
+      return;
+    }
     setSteps((previous) => ({ ...previous, [scenario]: step }));
     if (scenario === "discuss") setSelectedMaterial(null);
   };
   const next = (scenario: Scenario) =>
     choose(scenario, (steps[scenario] + 1) % scenarios[scenario].steps.length);
   const togglePlayback = (scenario: Scenario) => {
-    if (reducedMotion) return;
+    if (reducedMotion || scrollMode) return;
     if (scenario === "discuss") setSelectedMaterial(null);
     if (
       playing !== scenario &&
@@ -682,98 +777,133 @@ export function SessionDemo() {
       id="demo"
       aria-labelledby="session-demo-title"
     >
-      <Tabs
-        className="collaboration-demo"
-        value={scenario}
-        onValueChange={(value) => {
-          setPlaying(null);
-          setScenario(value as Scenario);
-        }}
+      <div
+        className="demo-scroll-track"
+        data-scroll-mode={scrollMode}
+        ref={track}
+        style={
+          {
+            "--demo-scroll-runway": `${TOTAL_STEP_COUNT * SCROLL_STEP_DISTANCE}px`,
+          } as CSSProperties
+        }
       >
-        <div className="demo-heading">
-          <div className="demo-copy">
-            <div className="demo-kicker">
-              <span className="overline">{copy.heading.overline}</span>
-              <span className="demo-sample">{copy.heading.sample}</span>
+        <Tabs
+          className="collaboration-demo"
+          ref={demo}
+          value={scenario}
+          onValueChange={(value) => {
+            if (scrollMode) {
+              choose(value as Scenario, 0);
+              return;
+            }
+            setPlaying(null);
+            setScenario(value as Scenario);
+          }}
+        >
+          <div className="demo-heading">
+            <div className="demo-copy">
+              <div className="demo-kicker">
+                <span className="overline">{copy.heading.overline}</span>
+                <span className="demo-sample">{copy.heading.sample}</span>
+              </div>
+              <div className="demo-title" key={scenario}>
+                <h2 id="session-demo-title">
+                  {scenario === "discuss"
+                    ? copy.heading.discussTitle
+                    : copy.heading.executeTitle}
+                </h2>
+              </div>
             </div>
-            <div className="demo-title" key={scenario}>
-              <h2 id="session-demo-title">
-                {scenario === "discuss"
-                  ? copy.heading.discussTitle
-                  : copy.heading.executeTitle}
-              </h2>
-            </div>
+            <TabsList
+              className="scenario-tabs"
+              aria-label={copy.heading.tabsAriaLabel}
+              data-scenario={scenario}
+            >
+              <TabsTrigger value="discuss" className="whitespace-normal">
+                <FileText size={16} />
+                <span>{copy.heading.discussTab}</span>
+              </TabsTrigger>
+              <TabsTrigger value="execute" className="whitespace-normal">
+                <Keyboard size={16} />
+                <span>{copy.heading.executeTab}</span>
+              </TabsTrigger>
+            </TabsList>
           </div>
-          <TabsList
-            className="scenario-tabs"
-            aria-label={copy.heading.tabsAriaLabel}
-            data-scenario={scenario}
-          >
-            <TabsTrigger value="discuss" className="whitespace-normal">
-              <FileText size={16} />
-              <span>{copy.heading.discussTab}</span>
-            </TabsTrigger>
-            <TabsTrigger value="execute" className="whitespace-normal">
-              <Keyboard size={16} />
-              <span>{copy.heading.executeTab}</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        <DemoControls
-          scenario={scenario}
-          step={steps[scenario]}
-          playing={playing === scenario && !reducedMotion}
-          reducedMotion={reducedMotion}
-          choose={(step) => choose(scenario, step)}
-          togglePlayback={() => togglePlayback(scenario)}
-        />
-        <div className="demo-panels" ref={panels}>
-          <TabsContent
-            value="discuss"
-            className="demo-chapter"
-            forceMount
-            inert={scenario !== "discuss"}
-            aria-hidden={scenario !== "discuss"}
-            tabIndex={scenario === "discuss" ? 0 : -1}
-          >
-            <DiscussionScene
-              step={steps.discuss}
-              active={scenario === "discuss"}
-              reducedMotion={reducedMotion}
-              selectedMaterial={selectedMaterial}
-              onSelect={(index) => {
-                setPlaying(null);
-                setSelectedMaterial(index);
-              }}
-              next={() => next("discuss")}
-            />
-            <div className="demo-takeaway">
-              <span>
-                <Check size={15} />
-                {copy.takeaways.discussPrimary}
+          <div className="demo-guidance">
+            <span>
+              {reducedMotion
+                ? copy.controls.reducedMotion
+                : scrollMode
+                  ? copy.controls.scrollHint
+                  : copy.controls.manualHint}
+            </span>
+            {scrollMode && (
+              <span className="demo-scroll-count" aria-hidden="true">
+                {String(
+                  (scenario === "discuss" ? 0 : DISCUSS_STEP_COUNT) +
+                    steps[scenario] +
+                    1,
+                ).padStart(2, "0")} / {String(TOTAL_STEP_COUNT).padStart(2, "0")}
               </span>
-              <span>{copy.takeaways.discussSecondary}</span>
-            </div>
-          </TabsContent>
-          <TabsContent
-            value="execute"
-            className="demo-chapter"
-            forceMount
-            inert={scenario !== "execute"}
-            aria-hidden={scenario !== "execute"}
-            tabIndex={scenario === "execute" ? 0 : -1}
-          >
-            <ExecutionScene step={steps.execute} next={() => next("execute")} />
-            <div className="demo-takeaway">
-              <span>
-                <Check size={15} />
-                {copy.takeaways.executePrimary}
-              </span>
-              <span>{copy.takeaways.executeSecondary}</span>
-            </div>
-          </TabsContent>
-        </div>
-      </Tabs>
+            )}
+          </div>
+          <DemoControls
+            scenario={scenario}
+            step={steps[scenario]}
+            playing={playing === scenario && !reducedMotion}
+            scrollMode={scrollMode}
+            reducedMotion={reducedMotion}
+            choose={(step) => choose(scenario, step)}
+            togglePlayback={() => togglePlayback(scenario)}
+          />
+          <div className="demo-panels" ref={panels}>
+            <TabsContent
+              value="discuss"
+              className="demo-chapter"
+              forceMount
+              inert={scenario !== "discuss"}
+              aria-hidden={scenario !== "discuss"}
+              tabIndex={scenario === "discuss" ? 0 : -1}
+            >
+              <DiscussionScene
+                step={steps.discuss}
+                active={scenario === "discuss"}
+                reducedMotion={reducedMotion}
+                selectedMaterial={selectedMaterial}
+                onSelect={(index) => {
+                  setPlaying(null);
+                  setSelectedMaterial(index);
+                }}
+                next={() => next("discuss")}
+              />
+              <div className="demo-takeaway">
+                <span>
+                  <Check size={15} />
+                  {copy.takeaways.discussPrimary}
+                </span>
+                <span>{copy.takeaways.discussSecondary}</span>
+              </div>
+            </TabsContent>
+            <TabsContent
+              value="execute"
+              className="demo-chapter"
+              forceMount
+              inert={scenario !== "execute"}
+              aria-hidden={scenario !== "execute"}
+              tabIndex={scenario === "execute" ? 0 : -1}
+            >
+              <ExecutionScene step={steps.execute} next={() => next("execute")} />
+              <div className="demo-takeaway">
+                <span>
+                  <Check size={15} />
+                  {copy.takeaways.executePrimary}
+                </span>
+                <span>{copy.takeaways.executeSecondary}</span>
+              </div>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
     </section>
   );
 }
