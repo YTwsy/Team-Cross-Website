@@ -549,7 +549,6 @@ function DemoControls({
   step,
   playing,
   scrollMode,
-  reducedMotion,
   choose,
   togglePlayback,
 }: {
@@ -557,7 +556,6 @@ function DemoControls({
   step: number;
   playing: boolean;
   scrollMode: boolean;
-  reducedMotion: boolean;
   choose: (step: number) => void;
   togglePlayback: () => void;
 }) {
@@ -598,12 +596,7 @@ function DemoControls({
           <button
             type="button"
             className="play-control"
-            disabled={reducedMotion}
-            aria-label={
-              reducedMotion
-                ? controls.reducedMotion
-                : controls.playbackAria(playing, current.name)
-            }
+            aria-label={controls.playbackAria(playing, current.name)}
             aria-pressed={playing}
             onClick={togglePlayback}
           >
@@ -642,8 +635,7 @@ export function SessionDemo() {
     const measure = () => {
       const fits =
         window.innerWidth > 760 &&
-        node.offsetHeight <= window.innerHeight - STICKY_TOP * 2 &&
-        !reducedMotion;
+        node.offsetHeight <= window.innerHeight - STICKY_TOP * 2;
       setScrollMode(fits);
       if (fits) setPlaying(null);
     };
@@ -655,7 +647,7 @@ export function SessionDemo() {
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [reducedMotion]);
+  }, []);
 
   useEffect(() => {
     if (!scrollMode) return;
@@ -698,7 +690,7 @@ export function SessionDemo() {
   }, [scrollMode]);
 
   useEffect(() => {
-    if (!playing || reducedMotion || scrollMode) return;
+    if (!playing || scrollMode) return;
     const timer = window.setTimeout(() => {
       if (steps[playing] === scenarios[playing].steps.length - 1)
         setPlaying(null);
@@ -709,21 +701,15 @@ export function SessionDemo() {
         }));
     }, 4500);
     return () => window.clearTimeout(timer);
-  }, [playing, steps, reducedMotion, scenarios, scrollMode]);
+  }, [playing, steps, scenarios, scrollMode]);
 
   useEffect(() => {
     const pauseForVisibility = () => {
       if (document.hidden) setPlaying(null);
     };
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const pauseForMotion = () => {
-      if (motion.matches) setPlaying(null);
-    };
     document.addEventListener("visibilitychange", pauseForVisibility);
-    motion.addEventListener("change", pauseForMotion);
     return () => {
       document.removeEventListener("visibilitychange", pauseForVisibility);
-      motion.removeEventListener("change", pauseForMotion);
     };
   }, []);
 
@@ -760,7 +746,7 @@ export function SessionDemo() {
   const next = (scenario: Scenario) =>
     choose(scenario, (steps[scenario] + 1) % scenarios[scenario].steps.length);
   const togglePlayback = (scenario: Scenario) => {
-    if (reducedMotion || scrollMode) return;
+    if (scrollMode) return;
     if (scenario === "discuss") setSelectedMaterial(null);
     if (
       playing !== scenario &&
@@ -831,11 +817,9 @@ export function SessionDemo() {
           </div>
           <div className="demo-guidance">
             <span>
-              {reducedMotion
-                ? copy.controls.reducedMotion
-                : scrollMode
-                  ? copy.controls.scrollHint
-                  : copy.controls.manualHint}
+              {scrollMode
+                ? copy.controls.scrollHint
+                : copy.controls.manualHint}
             </span>
             {scrollMode && (
               <span className="demo-scroll-count" aria-hidden="true">
@@ -850,9 +834,8 @@ export function SessionDemo() {
           <DemoControls
             scenario={scenario}
             step={steps[scenario]}
-            playing={playing === scenario && !reducedMotion}
+            playing={playing === scenario}
             scrollMode={scrollMode}
-            reducedMotion={reducedMotion}
             choose={(step) => choose(scenario, step)}
             togglePlayback={() => togglePlayback(scenario)}
           />

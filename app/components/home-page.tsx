@@ -10,6 +10,7 @@ import { localePaths } from "@/lib/i18n";
 import { repository } from "@/lib/site";
 
 import { LocaleProvider } from "./locale-context";
+import { LibrarySection } from "./library-section";
 import { SessionDemo } from "./session-demo";
 import {
   ConnectionSection,
@@ -27,6 +28,7 @@ const homeCopy = {
     navigation: [
       ["#demo", "协作演示"],
       ["#participate", "参与方式"],
+      ["#library", "资源库"],
       ["#connect", "连接方式"],
       ["#start", "开始使用"],
     ],
@@ -59,6 +61,7 @@ const homeCopy = {
     navigation: [
       ["#demo", "Demo"],
       ["#participate", "Ways to join"],
+      ["#library", "Library"],
       ["#connect", "Connections"],
       ["#start", "Get started"],
     ],
@@ -191,6 +194,7 @@ function LocalizedHome({ locale }: { locale: Locale }) {
         <SessionDemo />
         <WhySection />
         <ParticipationSection />
+        <LibrarySection />
         <ConnectionSection />
         <FutureSection />
         <StartSection />
