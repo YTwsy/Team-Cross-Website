@@ -4,6 +4,7 @@ import Image from "next/image";
 import {
   type CSSProperties,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -29,8 +30,10 @@ import {
 import { useLocale } from "./locale-context";
 
 type Scenario = DemoScenario;
-const SCROLL_STEP_DISTANCE = 280;
-const STICKY_TOP = 24;
+const SCROLL_STEP_DISTANCE = 320;
+const SCROLL_ENTRY_GUARD = 64;
+const MIN_PAN_DISTANCE = 200;
+const STICKY_TOP = 16;
 const DISCUSS_STEP_COUNT = sessionDemoCopy.en.scenarios.discuss.steps.length;
 const TOTAL_STEP_COUNT =
   DISCUSS_STEP_COUNT + sessionDemoCopy.en.scenarios.execute.steps.length;
@@ -47,6 +50,56 @@ function subscribeToMotion(callback: () => void) {
 
 function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function scrollStepDistance() {
+  if (window.innerWidth <= 760) return Math.max(1000, window.innerHeight);
+  if (window.innerWidth <= 1100 || window.innerHeight <= 850)
+    return Math.max(560, Math.round(window.innerHeight * 0.75));
+  return SCROLL_STEP_DISTANCE;
+}
+
+function panDemoPanel(panel: HTMLDivElement | null, progress: number) {
+  if (!panel) return;
+  const overflow = Math.max(0, panel.scrollHeight - panel.clientHeight);
+  // Adjacent steps can have different heights; keep their pan distance steady.
+  panel.scrollTop = Math.min(
+    overflow,
+    Math.max(overflow, MIN_PAN_DISTANCE) * progress,
+  );
+}
+
+function scenarioPanProgress(distance: number, index: number, stepDistance: number) {
+  const firstStep = index < DISCUSS_STEP_COUNT ? 0 : DISCUSS_STEP_COUNT;
+  const stepCount = index < DISCUSS_STEP_COUNT
+    ? DISCUSS_STEP_COUNT
+    : TOTAL_STEP_COUNT - DISCUSS_STEP_COUNT;
+  const scenarioDistance = Math.max(0, distance - firstStep * stepDistance);
+  return Math.min(
+    1,
+    Math.max(
+      0,
+      (scenarioDistance - SCROLL_ENTRY_GUARD) /
+        (stepCount * stepDistance - SCROLL_ENTRY_GUARD),
+    ),
+  );
+}
+
+let restoreScrollFrame = 0;
+let originalScrollBehavior: string | null = null;
+
+function jumpToDemoPosition(top: number) {
+  const root = document.documentElement;
+  if (originalScrollBehavior === null)
+    originalScrollBehavior = root.style.scrollBehavior;
+  root.style.scrollBehavior = "auto";
+  window.scrollTo({ top, behavior: "instant" });
+  window.cancelAnimationFrame(restoreScrollFrame);
+  restoreScrollFrame = window.requestAnimationFrame(() => {
+    root.style.scrollBehavior = originalScrollBehavior ?? "";
+    originalScrollBehavior = null;
+    restoreScrollFrame = 0;
+  });
 }
 
 function TrafficLights() {
@@ -548,14 +601,12 @@ function DemoControls({
   scenario,
   step,
   playing,
-  scrollMode,
   choose,
   togglePlayback,
 }: {
   scenario: Scenario;
   step: number;
   playing: boolean;
-  scrollMode: boolean;
   choose: (step: number) => void;
   togglePlayback: () => void;
 }) {
@@ -592,17 +643,15 @@ function DemoControls({
             </button>
           ))}
         </div>
-        {!scrollMode && (
-          <button
-            type="button"
-            className="play-control"
-            aria-label={controls.playbackAria(playing, current.name)}
-            aria-pressed={playing}
-            onClick={togglePlayback}
-          >
-            {playing ? <Pause size={16} /> : <Play size={16} />}
-          </button>
-        )}
+        <button
+          type="button"
+          className="play-control"
+          aria-label={controls.playbackAria(playing, current.name)}
+          aria-pressed={playing}
+          onClick={togglePlayback}
+        >
+          {playing ? <Pause size={16} /> : <Play size={16} />}
+        </button>
       </div>
       <p className="demo-caption" aria-live="polite">
         {current.captions[step]}
@@ -617,12 +666,13 @@ export function SessionDemo() {
   const [scenario, setScenario] = useState<Scenario>("discuss");
   const [steps, setSteps] = useState({ discuss: 0, execute: 0 });
   const [playing, setPlaying] = useState<Scenario | null>(null);
-  const [scrollMode, setScrollMode] = useState(false);
+  const [stepDistance, setStepDistance] = useState(SCROLL_STEP_DISTANCE);
   const [selectedMaterial, setSelectedMaterial] = useState<number | null>(null);
   const track = useRef<HTMLDivElement>(null);
-  const demo = useRef<HTMLDivElement>(null);
   const panels = useRef<HTMLDivElement>(null);
   const scrollStep = useRef(-1);
+  const scrollProgress = useRef(0);
+  const stepDistanceRef = useRef(SCROLL_STEP_DISTANCE);
   const reducedMotion = useSyncExternalStore(
     subscribeToMotion,
     prefersReducedMotion,
@@ -630,27 +680,27 @@ export function SessionDemo() {
   );
 
   useEffect(() => {
-    const node = demo.current;
-    if (!node) return;
     const measure = () => {
-      const fits =
-        window.innerWidth > 760 &&
-        node.offsetHeight <= window.innerHeight - STICKY_TOP * 2;
-      setScrollMode(fits);
-      if (fits) setPlaying(null);
+      const next = scrollStepDistance();
+      const previous = stepDistanceRef.current;
+      if (next === previous) return;
+      const node = track.current;
+      const start = node
+        ? node.getBoundingClientRect().top + window.scrollY - STICKY_TOP
+        : 0;
+      const distance = window.scrollY - start;
+      stepDistanceRef.current = next;
+      setStepDistance(next);
+      if (distance >= 0 && distance <= TOTAL_STEP_COUNT * previous) {
+        jumpToDemoPosition(start + (distance / previous) * next);
+      }
     };
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
     window.addEventListener("resize", measure);
     measure();
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
+    return () => window.removeEventListener("resize", measure);
   }, []);
 
   useEffect(() => {
-    if (!scrollMode) return;
     const node = track.current;
     if (!node) return;
     scrollStep.current = -1;
@@ -660,9 +710,17 @@ export function SessionDemo() {
       const distance = Math.max(0, window.scrollY - start);
       const index = Math.min(
         TOTAL_STEP_COUNT - 1,
-        Math.floor(distance / SCROLL_STEP_DISTANCE),
+        Math.floor(distance / stepDistance),
       );
-      if (index === scrollStep.current) return;
+      scrollProgress.current = scenarioPanProgress(
+        distance,
+        index,
+        stepDistance,
+      );
+      if (index === scrollStep.current) {
+        panDemoPanel(panels.current, scrollProgress.current);
+        return;
+      }
       scrollStep.current = index;
       const nextScenario: Scenario =
         index < DISCUSS_STEP_COUNT ? "discuss" : "execute";
@@ -687,21 +745,51 @@ export function SessionDemo() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [scrollMode]);
+  }, [stepDistance]);
+
+  useLayoutEffect(() => {
+    panDemoPanel(panels.current, scrollProgress.current);
+  }, [scenario, steps, selectedMaterial, stepDistance]);
 
   useEffect(() => {
-    if (!playing || scrollMode) return;
+    if (!playing) return;
     const timer = window.setTimeout(() => {
-      if (steps[playing] === scenarios[playing].steps.length - 1)
+      if (scenario !== playing || steps[playing] === scenarios[playing].steps.length - 1) {
         setPlaying(null);
-      else
-        setSteps((previous) => ({
-          ...previous,
-          [playing]: previous[playing] + 1,
-        }));
+        return;
+      }
+      const node = track.current;
+      if (!node) return;
+      const start = node.getBoundingClientRect().top + window.scrollY - STICKY_TOP;
+      const index =
+        (playing === "discuss" ? 0 : DISCUSS_STEP_COUNT) +
+        steps[playing] + 1;
+      jumpToDemoPosition(start + index * stepDistance + SCROLL_ENTRY_GUARD);
     }, 4500);
     return () => window.clearTimeout(timer);
-  }, [playing, steps, scenarios, scrollMode]);
+  }, [playing, scenario, steps, scenarios, stepDistance]);
+
+  useEffect(() => {
+    if (!playing) return;
+    const pause = () => setPlaying(null);
+    const pauseForScrollKey = (event: KeyboardEvent) => {
+      if (
+        ["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"].includes(
+          event.key,
+        ) ||
+        (event.key === " " && event.target === document.body)
+      )
+        pause();
+    };
+    window.addEventListener("wheel", pause, { passive: true });
+    window.addEventListener("touchstart", pause, { passive: true });
+    window.addEventListener("keydown", pauseForScrollKey);
+    return () => {
+      window.removeEventListener("wheel", pause);
+      window.removeEventListener("touchstart", pause);
+      window.removeEventListener("keydown", pauseForScrollKey);
+    };
+  }, [playing]);
 
   useEffect(() => {
     const pauseForVisibility = () => {
@@ -725,36 +813,35 @@ export function SessionDemo() {
 
   const choose = (scenario: Scenario, step: number) => {
     setPlaying(null);
-    if (scrollMode && track.current) {
+    if (track.current) {
       const index =
         (scenario === "discuss" ? 0 : DISCUSS_STEP_COUNT) + step;
       const start =
         track.current.getBoundingClientRect().top + window.scrollY - STICKY_TOP;
       scrollStep.current = index;
+      scrollProgress.current = scenarioPanProgress(
+        index * stepDistance + SCROLL_ENTRY_GUARD,
+        index,
+        stepDistance,
+      );
       setScenario(scenario);
       setSteps((previous) => ({ ...previous, [scenario]: step }));
       setSelectedMaterial(null);
-      window.scrollTo({
-        top: start + (index + 0.5) * SCROLL_STEP_DISTANCE,
-        behavior: "instant",
-      });
+      jumpToDemoPosition(start + index * stepDistance + SCROLL_ENTRY_GUARD);
       return;
     }
-    setSteps((previous) => ({ ...previous, [scenario]: step }));
-    if (scenario === "discuss") setSelectedMaterial(null);
   };
   const next = (scenario: Scenario) =>
     choose(scenario, (steps[scenario] + 1) % scenarios[scenario].steps.length);
   const togglePlayback = (scenario: Scenario) => {
-    if (scrollMode) return;
-    if (scenario === "discuss") setSelectedMaterial(null);
-    if (
-      playing !== scenario &&
-      steps[scenario] === scenarios[scenario].steps.length - 1
-    ) {
-      setSteps((previous) => ({ ...previous, [scenario]: 0 }));
+    if (playing === scenario) {
+      setPlaying(null);
+      return;
     }
-    setPlaying(playing === scenario ? null : scenario);
+    if (scenario === "discuss") setSelectedMaterial(null);
+    if (steps[scenario] === scenarios[scenario].steps.length - 1)
+      choose(scenario, 0);
+    setPlaying(scenario);
   };
 
   return (
@@ -765,25 +852,19 @@ export function SessionDemo() {
     >
       <div
         className="demo-scroll-track"
-        data-scroll-mode={scrollMode}
+        data-scroll-mode="true"
         ref={track}
         style={
           {
-            "--demo-scroll-runway": `${TOTAL_STEP_COUNT * SCROLL_STEP_DISTANCE}px`,
+            "--demo-scroll-runway": `${TOTAL_STEP_COUNT * stepDistance}px`,
           } as CSSProperties
         }
       >
         <Tabs
           className="collaboration-demo"
-          ref={demo}
           value={scenario}
           onValueChange={(value) => {
-            if (scrollMode) {
-              choose(value as Scenario, 0);
-              return;
-            }
-            setPlaying(null);
-            setScenario(value as Scenario);
+            choose(value as Scenario, 0);
           }}
         >
           <div className="demo-heading">
@@ -816,26 +897,19 @@ export function SessionDemo() {
             </TabsList>
           </div>
           <div className="demo-guidance">
-            <span>
-              {scrollMode
-                ? copy.controls.scrollHint
-                : copy.controls.manualHint}
+            <span>{copy.controls.scrollHint}</span>
+            <span className="demo-scroll-count" aria-hidden="true">
+              {String(
+                (scenario === "discuss" ? 0 : DISCUSS_STEP_COUNT) +
+                  steps[scenario] +
+                  1,
+              ).padStart(2, "0")} / {String(TOTAL_STEP_COUNT).padStart(2, "0")}
             </span>
-            {scrollMode && (
-              <span className="demo-scroll-count" aria-hidden="true">
-                {String(
-                  (scenario === "discuss" ? 0 : DISCUSS_STEP_COUNT) +
-                    steps[scenario] +
-                    1,
-                ).padStart(2, "0")} / {String(TOTAL_STEP_COUNT).padStart(2, "0")}
-              </span>
-            )}
           </div>
           <DemoControls
             scenario={scenario}
             step={steps[scenario]}
             playing={playing === scenario}
-            scrollMode={scrollMode}
             choose={(step) => choose(scenario, step)}
             togglePlayback={() => togglePlayback(scenario)}
           />

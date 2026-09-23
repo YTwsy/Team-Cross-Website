@@ -178,8 +178,7 @@ export const sessionDemoCopy = {
       stepsAria: (name: string) => `${name}演示步骤`,
       stepAria: (name: string, index: number, label: string) =>
         `${name}第 ${index} 步：${label}`,
-      scrollHint: "继续向下滚动，逐步看完材料与讨论、输入接力。演示结束后页面自然继续。",
-      manualHint: "点击步骤逐段查看，或按播放按钮观看当前演示。",
+      scrollHint: "向下滚动观看两段流程；也可点选步骤或播放。第 9 步结束后继续浏览页面。",
       playbackAria: (playing: boolean, name: string) =>
         `${playing ? "暂停" : "播放"}${name}演示`,
       demoOnly: "（演示）",
@@ -393,8 +392,7 @@ export const sessionDemoCopy = {
       stepAria: (name: string, index: number, label: string) =>
         `${name}, step ${index}: ${label}`,
       scrollHint:
-        "Scroll to step through both flows. The page continues after the demo.",
-      manualHint: "Choose a step, or press play to watch the current flow.",
+        "Scroll through both flows, choose a step, or press play. The page continues after step 9.",
       playbackAria: (playing: boolean, name: string) =>
         `${playing ? "Pause" : "Play"} the ${name} demo`,
       demoOnly: "(demo)",
